@@ -1,8 +1,9 @@
 """
 Module Model Trainer
 
-Module này chứa class ModelTrainer để huấn luyện và tối ưu các mô hình học máy cho bài toán dự đoán revenue. Hỗ trợ RandomForest, XGBoost, và LightGBM 
-với Optuna hyperparameter optimization.
+Module này chứa class ModelTrainer để huấn luyện và tối ưu các mô hình học máy
+cho các bài toán hồi quy (regression) trên dữ liệu dạng bảng (tabular).
+Hỗ trợ RandomForest, XGBoost, và LightGBM với Optuna hyperparameter optimization.
 """
 
 import numpy as np
@@ -30,6 +31,7 @@ import optuna
 from optuna.samplers import TPESampler
 
 # Setup logging
+Path("results/logs").mkdir(parents=True, exist_ok=True)
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -68,15 +70,7 @@ class ModelTrainer:
     """
     
     def __init__(self, config_path: str = "configs/config.yaml"):
-        """
-        Khởi tạo ModelTrainer với configuration.
-        
-        Args:
-            config_path (str): Đường dẫn đến file config.yaml
-            
-        Raises:
-            FileNotFoundError: Nếu không tìm thấy file config
-        """
+
         if not os.path.exists(config_path):
             raise FileNotFoundError(f"Không tìm thấy file config: {config_path}")
         
@@ -86,23 +80,32 @@ class ModelTrainer:
         self.model_config = self.config['model_training']
         self.random_state = self.model_config['random_state']
         
-        # Data placeholders
         self.X_train: Optional[np.ndarray] = None
         self.X_test: Optional[np.ndarray] = None
         self.y_train: Optional[np.ndarray] = None
         self.y_test: Optional[np.ndarray] = None
+
+        self.y_train_log: Optional[np.ndarray] = None
+        self.y_test_log: Optional[np.ndarray] = None
         
-        # Models và results
         self.models: Dict[str, Any] = {}
         self.results: Dict[str, Dict[str, float]] = {}
         self.best_params: Dict[str, Dict[str, Any]] = {}
         self.best_model_name: Optional[str] = None
-        
-        # Tạo thư mục logs nếu chưa có
-        Path("results/logs").mkdir(parents=True, exist_ok=True)
-        
+                
         logger.info("ModelTrainer đã được khởi tạo thành công")
     
+    @property
+    def best_model(self) -> Optional[Any]:
+        """
+        Trả về instance của model tốt nhất (nếu đã xác định),
+        giúp code bên ngoài truy cập nhanh mà không cần dò dict.
+        """
+        if self.best_model_name is None:
+            return None
+        return self.models.get(self.best_model_name)
+
+
     def load_data(
         self, 
         X_train: np.ndarray,
@@ -123,6 +126,9 @@ class ModelTrainer:
         self.X_test = X_test
         self.y_train = y_train
         self.y_test = y_test
+        
+        self.y_train_log = np.log1p(self.y_train)
+        self.y_test_log = np.log1p(self.y_test)
         
         logger.info(
             f"Đã load data - Train: {X_train.shape}, Test: {X_test.shape}"
@@ -150,6 +156,9 @@ class ModelTrainer:
             test_size=test_size,
             random_state=self.random_state
         )
+
+        self.y_train_log = np.log1p(self.y_train)
+        self.y_test_log = np.log1p(self.y_test)
         
         logger.info(
             f"Đã split data - Train: {self.X_train.shape}, Test: {self.X_test.shape}"
@@ -164,21 +173,15 @@ class ModelTrainer:
         """
         Đánh giá model trên test set với nhiều metrics.
         
-        Args:
-            model: Trained model
-            X_test (np.ndarray): Test features
-            y_test (np.ndarray): Test target
-            
-        Returns:
-            Dict[str, float]: Dictionary chứa các metrics
         """
-        y_pred = model.predict(X_test)
+        y_pred_log = model.predict(X_test)
+        
+        y_pred = np.expm1(y_pred_log)
+        y_pred = np.maximum(y_pred, 0)
         
         rmse = np.sqrt(mean_squared_error(y_test, y_pred))
         mae = mean_absolute_error(y_test, y_pred)
         r2 = r2_score(y_test, y_pred)
-        
-        # MAPE (Mean Absolute Percentage Error)
         mape = np.mean(np.abs((y_test - y_pred) / (y_test + 1e-10))) * 100
         
         return {
@@ -187,18 +190,24 @@ class ModelTrainer:
             'R2': r2,
             'MAPE': mape
         }
+
+    def evaluate(self) -> Dict[str, Dict[str, float]]:
+        """
+        Phương thức public để trả về toàn bộ kết quả đánh giá hiện có.
+        Thỏa yêu cầu đề: có hàm evaluate() rõ ràng.
+
+        Returns:
+            Dict[model_name, metrics_dict]
+        """
+        if not self.results:
+            raise RuntimeError("Chưa có model nào được train để evaluate.")
+        return self.results
+
     
     def _optimize_random_forest(self) -> Tuple[Any, Dict[str, Any]]:
-        """
-        Tối ưu RandomForest bằng Optuna.
-        
-        Returns:
-            Tuple: (best_model, best_params)
-        """
         logger.info("Bắt đầu optimize RandomForest với Optuna...")
         
         def objective(trial):
-            # Suggest hyperparameters
             params = {
                 'n_estimators': trial.suggest_int('n_estimators', 100, 500),
                 'max_depth': trial.suggest_int('max_depth', 10, 50),
@@ -209,22 +218,19 @@ class ModelTrainer:
                 'n_jobs': -1
             }
             
-            # Train model với cross-validation
             model = RandomForestRegressor(**params)
             
-            # Dùng negative RMSE làm score (vì cross_val_score maximize)
             scores = cross_val_score(
                 model, 
                 self.X_train, 
-                self.y_train,
+                self.y_train_log,
                 cv=self.model_config['cv_folds'],
                 scoring='neg_root_mean_squared_error',
                 n_jobs=-1
             )
             
-            return -scores.mean()  # Return positive RMSE
+            return -scores.mean() 
         
-        # Tạo study
         study = optuna.create_study(
             direction='minimize',
             sampler=TPESampler(seed=self.random_state)
@@ -237,13 +243,12 @@ class ModelTrainer:
             show_progress_bar=True
         )
         
-        # Train model với best params
         best_params = study.best_params
         best_params['random_state'] = self.random_state
         best_params['n_jobs'] = -1
         
         best_model = RandomForestRegressor(**best_params)
-        best_model.fit(self.X_train, self.y_train)
+        best_model.fit(self.X_train, self.y_train_log)
         
         logger.info(f"RandomForest - Best RMSE: {study.best_value:.2f}")
         logger.info(f"RandomForest - Best params: {best_params}")
@@ -251,16 +256,10 @@ class ModelTrainer:
         return best_model, best_params
     
     def _optimize_xgboost(self) -> Tuple[Any, Dict[str, Any]]:
-        """
-        Tối ưu XGBoost bằng Optuna.
-        
-        Returns:
-            Tuple: (best_model, best_params)
-        """
+  
         logger.info("Bắt đầu optimize XGBoost với Optuna...")
         
         def objective(trial):
-            # Suggest hyperparameters
             params = {
                 'n_estimators': trial.suggest_int('n_estimators', 100, 500),
                 'max_depth': trial.suggest_int('max_depth', 3, 10),
@@ -273,13 +272,12 @@ class ModelTrainer:
                 'verbosity': 0
             }
             
-            # Train model với cross-validation
             model = xgb.XGBRegressor(**params)
             
             scores = cross_val_score(
                 model,
                 self.X_train,
-                self.y_train,
+                self.y_train_log,
                 cv=self.model_config['cv_folds'],
                 scoring='neg_root_mean_squared_error',
                 n_jobs=-1
@@ -287,7 +285,6 @@ class ModelTrainer:
             
             return -scores.mean()
         
-        # Tạo study
         study = optuna.create_study(
             direction='minimize',
             sampler=TPESampler(seed=self.random_state)
@@ -300,14 +297,13 @@ class ModelTrainer:
             show_progress_bar=True
         )
         
-        # Train model với best params
         best_params = study.best_params
         best_params['random_state'] = self.random_state
         best_params['n_jobs'] = -1
         best_params['verbosity'] = 0
         
         best_model = xgb.XGBRegressor(**best_params)
-        best_model.fit(self.X_train, self.y_train)
+        best_model.fit(self.X_train, self.y_train_log)
         
         logger.info(f"XGBoost - Best RMSE: {study.best_value:.2f}")
         logger.info(f"XGBoost - Best params: {best_params}")
@@ -315,16 +311,9 @@ class ModelTrainer:
         return best_model, best_params
     
     def _optimize_lightgbm(self) -> Tuple[Any, Dict[str, Any]]:
-        """
-        Tối ưu LightGBM bằng Optuna.
-        
-        Returns:
-            Tuple: (best_model, best_params)
-        """
         logger.info("Bắt đầu optimize LightGBM với Optuna...")
         
         def objective(trial):
-            # Suggest hyperparameters
             params = {
                 'n_estimators': trial.suggest_int('n_estimators', 100, 500),
                 'max_depth': trial.suggest_int('max_depth', 3, 10),
@@ -338,13 +327,12 @@ class ModelTrainer:
                 'verbosity': -1
             }
             
-            # Train model với cross-validation
             model = lgb.LGBMRegressor(**params)
             
             scores = cross_val_score(
                 model,
                 self.X_train,
-                self.y_train,
+                self.y_train_log,
                 cv=self.model_config['cv_folds'],
                 scoring='neg_root_mean_squared_error',
                 n_jobs=-1
@@ -352,7 +340,6 @@ class ModelTrainer:
             
             return -scores.mean()
         
-        # Tạo study
         study = optuna.create_study(
             direction='minimize',
             sampler=TPESampler(seed=self.random_state)
@@ -365,31 +352,51 @@ class ModelTrainer:
             show_progress_bar=True
         )
         
-        # Train model với best params
         best_params = study.best_params
         best_params['random_state'] = self.random_state
         best_params['n_jobs'] = -1
         best_params['verbosity'] = -1
         
         best_model = lgb.LGBMRegressor(**best_params)
-        best_model.fit(self.X_train, self.y_train)
+        best_model.fit(self.X_train, self.y_train_log)
         
         logger.info(f"LightGBM - Best RMSE: {study.best_value:.2f}")
         logger.info(f"LightGBM - Best params: {best_params}")
         
         return best_model, best_params
     
-    def train_model(self, model_name: str) -> None:
+    def optimize_params(self, model_name: str) -> Dict[str, Any]:
         """
-        Train một model cụ thể với Optuna optimization.
-        
+        Tối ưu siêu tham số cho một model cụ thể (theo yêu cầu đề: optimize_params()).
+
         Args:
-            model_name (str): Tên model ('random_forest', 'xgboost', 'lightgbm')
-            
-        Raises:
-            ValueError: Nếu model_name không hợp lệ
-            RuntimeError: Nếu chưa load data
+            model_name (str): 'random_forest' | 'xgboost' | 'lightgbm'
+
+        Returns:
+            Dict[str, Any]: best hyperparameters cho model đó
         """
+        if self.X_train is None:
+            raise RuntimeError("Chưa có dữ liệu. Gọi load_data() hoặc split_data() trước.")
+
+        valid_models = ['random_forest', 'xgboost', 'lightgbm']
+        if model_name not in valid_models:
+            raise ValueError(f"Model name phải là một trong: {valid_models}")
+
+        if model_name == 'random_forest':
+            model, params = self._optimize_random_forest()
+        elif model_name == 'xgboost':
+            model, params = self._optimize_xgboost()
+        else:
+            model, params = self._optimize_lightgbm()
+
+        self.models[model_name] = model
+        self.best_params[model_name] = params
+
+        return params
+
+
+    def train_model(self, model_name: str) -> None:
+
         if self.X_train is None:
             raise RuntimeError("Chưa load data. Vui lòng gọi load_data() hoặc split_data() trước.")
         
@@ -403,7 +410,6 @@ class ModelTrainer:
         
         start_time = datetime.now()
         
-        # Optimize và train
         if model_name == 'random_forest':
             model, params = self._optimize_random_forest()
         elif model_name == 'xgboost':
@@ -411,10 +417,8 @@ class ModelTrainer:
         elif model_name == 'lightgbm':
             model, params = self._optimize_lightgbm()
         
-        # Evaluate trên test set
         metrics = self._evaluate_model(model, self.X_test, self.y_test)
         
-        # Lưu kết quả
         self.models[model_name] = model
         self.best_params[model_name] = params
         self.results[model_name] = metrics
@@ -444,7 +448,6 @@ class ModelTrainer:
             except Exception as e:
                 logger.error(f"Lỗi khi training {model_name}: {e}")
         
-        # Xác định best model
         self._determine_best_model()
         
         logger.info("\n" + "="*60)
@@ -459,7 +462,6 @@ class ModelTrainer:
             logger.warning("Chưa có kết quả nào để so sánh")
             return
         
-        # Tìm model có RMSE thấp nhất
         best_model = min(self.results.items(), key=lambda x: x[1]['RMSE'])
         self.best_model_name = best_model[0]
         
@@ -488,16 +490,6 @@ class ModelTrainer:
         return comparison_df
     
     def save_model(self, model_name: str, filepath: str) -> None:
-        """
-        Lưu một model cụ thể vào file.
-        
-        Args:
-            model_name (str): Tên model cần lưu
-            filepath (str): Đường dẫn file để lưu
-            
-        Raises:
-            ValueError: Nếu model chưa được train
-        """
         if model_name not in self.models:
             raise ValueError(f"Model {model_name} chưa được train")
         
@@ -507,24 +499,12 @@ class ModelTrainer:
         logger.info(f"Đã lưu {model_name} vào: {filepath}")
     
     def save_best_model(self, filepath: str) -> None:
-        """
-        Lưu model tốt nhất vào file.
-        
-        Args:
-            filepath (str): Đường dẫn file để lưu
-        """
         if self.best_model_name is None:
             raise RuntimeError("Chưa xác định được best model")
         
         self.save_model(self.best_model_name, filepath)
     
     def save_all_models(self, directory: str = "models") -> None:
-        """
-        Lưu tất cả các trained models vào thư mục.
-        
-        Args:
-            directory (str): Thư mục để lưu models
-        """
         Path(directory).mkdir(parents=True, exist_ok=True)
         
         for model_name in self.models:
@@ -532,23 +512,15 @@ class ModelTrainer:
             self.save_model(model_name, filepath)
     
     def save_results(self, filepath: str = "results/experiments.csv") -> None:
-        """
-        Lưu kết quả thí nghiệm vào file CSV.
-        
-        Args:
-            filepath (str): Đường dẫn file CSV
-        """
         if not self.results:
             logger.warning("Chưa có kết quả nào để lưu")
             return
         
         Path(filepath).parent.mkdir(parents=True, exist_ok=True)
         
-        # Tạo DataFrame từ results
         df = pd.DataFrame(self.results).T
         df['timestamp'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         
-        # Nếu file đã tồn tại, append vào
         if os.path.exists(filepath):
             existing_df = pd.read_csv(filepath, index_col=0)
             df = pd.concat([existing_df, df])
@@ -557,12 +529,6 @@ class ModelTrainer:
         logger.info(f"Đã lưu kết quả vào: {filepath}")
     
     def save_best_params(self, filepath: str = "results/best_params.json") -> None:
-        """
-        Lưu best parameters của tất cả models vào JSON.
-        
-        Args:
-            filepath (str): Đường dẫn file JSON
-        """
         if not self.best_params:
             logger.warning("Chưa có best params nào để lưu")
             return
@@ -576,21 +542,11 @@ class ModelTrainer:
     
     @staticmethod
     def load_model(filepath: str) -> Any:
-        """
-        Load model từ file.
-        
-        Args:
-            filepath (str): Đường dẫn file model
-            
-        Returns:
-            Model đã được load
-        """
         if not os.path.exists(filepath):
             raise FileNotFoundError(f"Không tìm thấy file: {filepath}")
         
         model = joblib.load(filepath)
         logger.info(f"Đã load model từ: {filepath}")
-        
         return model
     
     def get_feature_importance(
@@ -599,29 +555,16 @@ class ModelTrainer:
         feature_names: List[str],
         top_n: int = 15
     ) -> pd.DataFrame:
-        """
-        Lấy feature importance của một model.
-        
-        Args:
-            model_name (str): Tên model
-            feature_names (List[str]): Danh sách tên features
-            top_n (int): Số lượng top features cần lấy
-            
-        Returns:
-            pd.DataFrame: DataFrame chứa feature importance
-        """
         if model_name not in self.models:
             raise ValueError(f"Model {model_name} chưa được train")
         
         model = self.models[model_name]
         
-        # Lấy feature importance
         if hasattr(model, 'feature_importances_'):
             importances = model.feature_importances_
         else:
             raise AttributeError(f"Model {model_name} không có feature_importances_")
         
-        # Tạo DataFrame
         importance_df = pd.DataFrame({
             'feature': feature_names,
             'importance': importances
@@ -645,23 +588,18 @@ class ModelTrainer:
 
 
 if __name__ == "__main__":
-    # Load preprocessed data
     X_train = pd.read_csv("data/processed/X_train.csv").values
     y_train = pd.read_csv("data/processed/y_train.csv").values.ravel()
     X_test = pd.read_csv("data/processed/X_test.csv").values
     y_test = pd.read_csv("data/processed/y_test.csv").values.ravel()
     
-    # Khởi tạo trainer
     trainer = ModelTrainer()
     trainer.load_data(X_train, X_test, y_train, y_test)
     
-    # Train tất cả models
     trainer.train_all_models()
     
-    # So sánh models
     comparison = trainer.compare_models()
     
-    # Lưu models và kết quả
     trainer.save_all_models()
     trainer.save_results()
     trainer.save_best_params()

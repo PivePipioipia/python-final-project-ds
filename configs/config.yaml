@@ -1,0 +1,112 @@
+# Cấu hình toàn bộ dự án Movie Revenue Prediction
+
+# Cấu hình Thu thập Dữ liệu
+data_collection:
+  start_year: 2020
+  end_year: 2024
+  min_budget: 1000000  # Chỉ lấy phim có budget >= 1 triệu USD
+  min_revenue: 1000  # Chỉ lấy phim có revenue > 0
+  max_movies_per_year: 500  # Giới hạn số phim mỗi năm để tránh quá nhiều dữ liệu
+  language: "en"  # Chỉ lấy phim tiếng Anh để đồng nhất
+  
+# Cấu hình Tiền xử lý Dữ liệu
+preprocessing:
+  # Xử lý Missing Values
+  numeric_imputation: "median"  # median, mean, hoặc zero
+  categorical_imputation: "most_frequent"  # most_frequent hoặc constant
+  
+  # Xử lý Outliers (IQR method)
+  outlier_detection:
+    enabled: true
+    method: "IQR"  # IQR hoặc zscore
+    iqr_multiplier: 1.5  # Hệ số nhân với IQR để xác định outlier
+    columns:
+      - budget
+      - revenue
+      - runtime
+      - vote_average
+      - vote_count
+  
+  # Feature Engineering cho Date
+  date_features:
+    - year
+    - month
+    - quarter
+    - day_of_week
+    - is_weekend
+  
+  # TF-IDF cho Overview
+  tfidf:
+    max_features: 100  # Số lượng features tối đa từ TF-IDF
+    min_df: 2  # Từ phải xuất hiện ít nhất 2 documents
+    max_df: 0.8  # Từ không được xuất hiện quá 80% documents
+    ngram_range: [1, 2]  # Unigrams và bigrams
+  
+  # Scaling
+  scaling_method: "standard"  # standard hoặc minmax
+  
+  # Test Size
+  test_size: 0.2
+
+# Cấu hình Model Training
+model_training:
+  # Random Seed cho Reproducibility
+  random_state: 42
+  
+  # Cross Validation
+  cv_folds: 5
+  
+  # Optuna Optimization
+  optuna:
+    n_trials: 50  # Số lượng trials cho mỗi model
+    timeout: 3600  # Timeout 1 giờ (3600 giây)
+    n_jobs: -1  # Sử dụng tất cả CPU cores
+    
+  # Model-specific configurations
+  models:
+    random_forest:
+      param_space:
+        n_estimators: [100, 500]
+        max_depth: [10, 50]
+        min_samples_split: [2, 10]
+        min_samples_leaf: [1, 4]
+        max_features: ["sqrt", "log2"]
+    
+    xgboost:
+      param_space:
+        n_estimators: [100, 500]
+        max_depth: [3, 10]
+        learning_rate: [0.01, 0.3]
+        subsample: [0.6, 1.0]
+        colsample_bytree: [0.6, 1.0]
+        min_child_weight: [1, 7]
+    
+    lightgbm:
+      param_space:
+        n_estimators: [100, 500]
+        max_depth: [3, 10]
+        learning_rate: [0.01, 0.3]
+        num_leaves: [20, 100]
+        min_child_samples: [10, 50]
+        subsample: [0.6, 1.0]
+        colsample_bytree: [0.6, 1.0]
+
+# Cấu hình Visualization
+visualization:
+  figure_size: [12, 8]
+  dpi: 300
+  style: "seaborn-v0_8-darkgrid"
+  color_palette: "husl"
+  save_format: "png"  # png, jpg, hoặc svg
+  
+  # Feature Importance
+  top_n_features: 15  # Hiển thị top 15 features quan trọng nhất
+
+# Cấu hình Đường dẫn
+paths:
+  raw_data: "data/raw"
+  processed_data: "data/processed"
+  models: "models"
+  results: "results"
+  visualizations: "visualizations"
+  logs: "results/logs"

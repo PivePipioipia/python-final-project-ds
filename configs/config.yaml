@@ -2,7 +2,7 @@
 
 # Cấu hình Thu thập Dữ liệu
 data_collection:
-  start_year: 2020
+  start_year: 2010
   end_year: 2024
   min_budget: 1000000  # Chỉ lấy phim có budget >= 1 triệu USD
   min_revenue: 1000  # Chỉ lấy phim có revenue > 0
@@ -19,7 +19,7 @@ preprocessing:
   outlier_detection:
     enabled: true
     method: "IQR"  # IQR hoặc zscore
-    iqr_multiplier: 1.5  # Hệ số nhân với IQR để xác định outlier
+    iqr_multiplier: 3.0  # Hệ số nhân với IQR để xác định outlier
     columns:
       - budget
       - revenue
@@ -37,7 +37,7 @@ preprocessing:
   
   # TF-IDF cho Overview
   tfidf:
-    max_features: 100  # Số lượng features tối đa từ TF-IDF
+    max_features: 30  # Số lượng features tối đa từ TF-IDF
     min_df: 2  # Từ phải xuất hiện ít nhất 2 documents
     max_df: 0.8  # Từ không được xuất hiện quá 80% documents
     ngram_range: [1, 2]  # Unigrams và bigrams

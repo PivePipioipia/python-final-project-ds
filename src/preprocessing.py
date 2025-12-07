@@ -140,21 +140,21 @@ class DataPreprocessor(BasePreprocessor):
         for col in numeric_cols:
             if df[col].isnull().any():
                 if numeric_strategy == 'median':
-                    df[col].fillna(df[col].median(), inplace=True)
+                    df[col] = df[col].fillna(df[col].median())
                 elif numeric_strategy == 'mean':
-                    df[col].fillna(df[col].mean(), inplace=True)
+                    df[col] = df[col].fillna(df[col].mean())
                 elif numeric_strategy == 'zero':
-                    df[col].fillna(0, inplace=True)
+                    df[col] = df[col].fillna(0)
 
         # Xử lý categorical/text columns
         text_cols = ['overview', 'genres', 'production_companies']
         for col in text_cols:
             if col in df.columns:
-                df[col].fillna('', inplace=True)
+                df[col] = df[col].fillna('')
 
         # Xử lý release_date
         if 'release_date' in df.columns:
-            df['release_date'].fillna(method='ffill', inplace=True)
+            df['release_date'] = df['release_date'].ffill()
 
         logger.info("Đã xử lý missing values")
         return df

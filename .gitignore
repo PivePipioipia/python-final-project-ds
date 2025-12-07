@@ -1,20 +1,32 @@
-echo # Python ignores > .gitignore
-echo __pycache__/ >> .gitignore
-echo .ipynb_checkpoints/ >> .gitignore
-echo .vscode/ >> .gitignore
-echo *.pyc >> .gitignore
-echo *.pyo >> .gitignore
-echo *.pyd >> .gitignore
-echo .DS_Store >> .gitignore
-echo env/ >> .gitignore
-echo venv/ >> .gitignore
-echo movie_env/ >> .gitignore
-echo movie_env2/ >> .gitignore
-echo *.log >> .gitignore
-echo *.sqlite3 >> .gitignore
-echo *.db >> .gitignore
-echo *.zip >> .gitignore
-echo *.rar >> .gitignore
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.ipynb_checkpoints/
+.vscode/
+
+# Environment
+env/
+venv/
+movie_env/
+movie_env2/
 .env
 *.env
 
+# Large Data & Models
+data/raw/
+data/processed/
+models/*.pkl
+notebooks/models/*.pkl
+*.pkl
+
+
+# Logs & OS
+*.log
+.DS_Store
+Thumbs.db
+
+# Archives
+*.zip
+*.rar
+*.tar.gz

@@ -1,98 +1,104 @@
-# 🎬 Movie Revenue Prediction
+# 🎬 Movie Revenue Prediction (Advanced)
 
-Dự án Machine Learning dự đoán doanh thu phim điện ảnh dựa trên các đặc trưng như kinh phí, thể loại, diễn viên, và tóm tắt nội dung (overview).
+Dự án Machine Learning dự đoán doanh thu phim điện ảnh (Box Office Revenue) 
 
-## Tính Năng Chính
-- **Tự động thu thập dữ liệu**: Tích hợp TMDb API để tải dữ liệu phim mới nhất.
-- **Data Pipeline**: Quy trình khép kín từ Raw Data -> Preprocessing -> Feature Engineering.
-- **Xử lý ngôn ngữ tự nhiên (NLP)**: Sử dụng TF-IDF để trích xuất đặc trưng từ nội dung phim (Overview).
-- **Tối ưu hóa Hyperparameter**: Tự động tinh chỉnh tham số cho các mô hình (RandomForest, XGBoost, LightGBM) sử dụng **Optuna**.
-- **Giao diện dòng lệnh (CLI)**: Dễ dàng chạy và quản lý pipeline thông qua `main.py`.
+![Python](https://img.shields.io/badge/Python-3.8%2B-blue)
+![Status](https://img.shields.io/badge/Status-Completed-success)
+
+---
+
+## Tính Năng Nổi Bật (Highlights)
+
+*   **Dữ Liệu Thực Tế**: Tự động lấy dữ liệu từ **TMDb API** (giai đoạn 2010-2024).
+*   **Dual Data Pipeline**: Hỗ trợ 2 chiến lược xử lý dữ liệu song song để so sánh:
+    *   **V1 (Basic)**: Fill thiếu bằng trung bình, lọc bỏ outliers (bom tấn), dùng TF-IDF đơn giản.
+    *   **V2 (Advanced - Recommended)**:
+        *   **KNN Imputer**: Điền dữ liệu thiếu thông minh dựa trên các phim tương đồng.
+        *   **Semantic Embeddings (BGE)**: Hiểu nội dung tóm tắt phim (Overview) bằng mô hình ngôn ngữ `BAAI/bge-small-en-v1.5` thay vì đếm từ (Bag-of-Words).
+        *   **Robust Scaler**: Xử lý tốt các phim "bom tấn" (Outliers) mà không cần xóa bỏ chúng, giữ lại dữ liệu quý giá.
+*   **Tự Động Tối Ưu (AutoML)**: Sử dụng **Optuna** để dò tìm bộ tham số tốt nhất cho RandomForest, XGBoost, LightGBM.
+*   **End-to-End Pipeline**: Từ `Raw Data` -> `Feature Engineering` -> `Training` -> `Evaluation`
+
+---
 
 ## Cài Đặt
 
-1. **Clone dự án**
+### 1. Clone Dự Án
 ```bash
 git clone https://github.com/PivePipioipia/python-final-project-ds
+cd python-final-project-ds
 ```
 
-2. **Tạo môi trường ảo**
+### 2. Thiết Lập Môi Trường (Khuyên dùng Conda hoặc Venv)
 ```bash
+# Tạo môi trường
 python -m venv venv
-# Windows
+
+# Kích hoạt (Windows)
 venv\Scripts\activate
-# Linux/Mac
+
+# Kích hoạt (Mac/Linux)
 source venv/bin/activate
 ```
 
-3. **Cài đặt thư viện**
+### 3. Cài Đặt Thư Viện
+Dự án yêu cầu các thư viện ML cơ bản và `sentence-transformers` cho NLP.
 ```bash
 pip install -r requirements.txt
 ```
 
-4. **Cấu hình API Key**
-
-Lấy api key từ web
-- TMDB_API_KEY=your_api_key_here
-
-
-## Hướng Dẫn Sử Dụng
-
-Dự án được điều khiển thông qua file `main.py`. Các lệnh hỗ trợ:
-
-### 1. Thu thập dữ liệu
-Tải dữ liệu phim theo cấu hình trong `configs/config.yaml`:
-```bash
-python main.py fetch-data
+### 4. Cấu Hình API Key
+Tạo file `.env` trong thư mục gốc và điền key của bạn vào:
+```env
+TMDB_API_KEY=your_api_key_here
 ```
+*(Nếu không có API Key, bạn có thể dùng file dữ liệu mẫu có sẵn trong `data/raw`)*
 
-### 2. Tiền xử lý dữ liệu
-Làm sạch, tạo features và chuẩn hóa dữ liệu:
-```bash
-python main.py preprocess
-```
+---
 
-### 3. Huấn luyện mô hình
-Train từng model cụ thể hoặc tất cả:
-```bash
-# Train Random Forest
-python main.py train --model random_forest
+## Hướng Dẫn Chạy (Quick Start)
 
-# Train tất cả và so sánh
-python main.py train-all
-```
+Cách nhanh nhất để trải nghiệm dự án là chạy Notebook Pipeline.
 
-### 4. Chạy toàn bộ Pipeline
-Chạy từ A-Z (Fetch -> Preprocess -> Train -> Evaluate):
-```bash
-python main.py full-pipeline
-```
+1.  Mở Jupyter Notebook:
+    ```bash
+    jupyter notebook
+    ```
+2.  Mở file **`notebooks/preview_pipeline.ipynb`**.
+3.  Bấm **Run All**.
+    *   Notebook sẽ tự động tải dữ liệu, chạy cả V1 và V2, sau đó in ra bảng so sánh hiệu năng trực tiếp.
+
+---
+
+## Kết Quả So Sánh (Benchmark)
+
+Tại sao lại cần phiên bản V2? Dưới đây là kết quả thực nghiệm trên tập dữ liệu phim 2010-2024:
+
+| Metric | V1 (Basic) | V2 (Advanced) | Nhận Xét |
+| :--- | :--- | :--- | :--- |
+| **Chiến lược Outlier** | Xóa bỏ phim > 1.5 IQR | Giữ lại (Dùng RobustScaler) | V1 mất hết các phim bom tấn (Marvel, Avatar...), V2 giữ lại được. |
+| **Feature Text** | TF-IDF (100 features) | BGE Embeddings (384 dims) | V2 hiểu ngữ nghĩa tốt hơn nhiều. |
+| **R2 Score** | ~0.59 | **~0.76** | **V2 giải thích được 76% sự biến thiên dữ liệu.** |
+| **MAE (Sai số)** | Thấp ($28M) | Cao ($53M) | V1 sai số thấp do chỉ đoán phim nhỏ. V2 sai số cao hơn do phải đoán cả phim tỷ đô (sai số tuyệt đối lớn là bình thường). |
+
+ **Kết luận**: V2 vượt trội hoàn toàn về khả năng tổng quát hóa và độ chính xác thực tế.
+
+---
 
 ## Cấu Trúc Dự Án
 
-```
-movie-revenue-prediction/
-├── configs/             # File cấu hình (YAML)
-├── data/                # Dữ liệu
-│   ├── raw/             # Dữ liệu thô từ API
-│   └── processed/       # Dữ liệu đã làm sạch
-├── models/              # Các model đã train (.pkl)
-├── notebooks/           # Jupyter notebooks cho EDA & Demo
-├── results/             # Logs và kết quả thí nghiệm
-├── src/                 # Source code chính
-│   ├── data_loader.py   # Code tải dữ liệu
-│   ├── preprocessing.py # Code xử lý dữ liệu
-│   ├── model_trainer.py # Code huấn luyện model
-│   └── visualizer.py    # Code vẽ biểu đồ
-├── main.py              # Entry point của dự án
-├── requirements.txt     # Danh sách thư viện
-└── README.md            # Tài liệu dự án
-```
+*   **`configs/config.yaml`**: "Bộ não" của dự án. Chỉnh sửa năm lấy dữ liệu, tham số model, ngưỡng lọc outlier tại đây.
+*   **`src/`**: Mã nguồn chính.
+    *   `data_loader.py`: Class `TMDbDataLoader` tải và lưu trữ dữ liệu.
+    *   `preprocessing_v2.py`: **(Core)** Class `DataPreprocessorV2` chứa toàn bộ logic xử lý nâng cao.
+    *   `model_trainer.py`: Class `ModelTrainer` quản lý việc huấn luyện và Optuna.
+*   **`notebooks/`**:
+    *   `preview_pipeline.ipynb`: Demo chạy toàn bộ quy trình.
+    *   `eda_analysis.ipynb`: Phân tích khám phá dữ liệu (Biểu đồ, Insight).
+    *   `demo_inference.ipynb`: Nhập thông tin phim bất kỳ -> Dự đoán doanh thu.
 
-## Mô Hình & Hiệu Năng
-Hiện tại dự án hỗ trợ 3 thuật toán chính:
-- **Random Forest**: Mạnh mẽ, ít bị overfit.
-- **XGBoost**: Tốc độ cao, hiệu năng tốt trên dữ liệu bảng.
-- **LightGBM**: Tối ưu cho dữ liệu lớn.
+---
 
-Tất cả mô hình đều được đánh giá bằng **RMSE**, **MAE**, **R2** và **MAPE**.
+
+
+© 2025 Movie Revenue Prediction Project.

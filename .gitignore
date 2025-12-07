@@ -15,3 +15,6 @@ echo *.sqlite3 >> .gitignore
 echo *.db >> .gitignore
 echo *.zip >> .gitignore
 echo *.rar >> .gitignore
+.env
+*.env
+

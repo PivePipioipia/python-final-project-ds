@@ -4,10 +4,10 @@
 data_collection:
   start_year: 2010
   end_year: 2024
-  min_budget: 1000000  # Chỉ lấy phim có budget >= 1 triệu USD
-  min_revenue: 1000  # Chỉ lấy phim có revenue > 0
-  max_movies_per_year: 500  # Giới hạn số phim mỗi năm để tránh quá nhiều dữ liệu
-  language: "en"  # Chỉ lấy phim tiếng Anh để đồng nhất
+  min_budget: 1000000  
+  min_revenue: 1000 
+  max_movies_per_year: 500 
+  language: "en" 
   
 # Cấu hình Tiền xử lý Dữ liệu
 preprocessing:

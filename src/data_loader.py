@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 import yaml
 import logging
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 load_dotenv()
 
@@ -135,6 +136,19 @@ class TMDbDataLoader(BaseDataLoader):
             logger.error(f"Lỗi fetch chi tiết {movie_id}: {e}")
             return None
 
+    def _fetch_single_movie_detail(self, movie_id: int, min_budget: float, min_revenue: float) -> Optional[Dict]:
+        """
+        Helper function để fetch chi tiết 1 phim (dùng cho parallel execution).
+        """
+        details = self.get_movie_details(movie_id)
+        if not details:
+            return None
+
+        # Kiểm tra điều kiện budget/revenue
+        if details.get("budget", 0) >= min_budget and details.get("revenue", 0) >= min_revenue:
+            return details
+        return None
+
     def fetch_movies(self, start_year=None, end_year=None):
         if start_year is None:
             start_year = self.data_config["start_year"]
@@ -143,23 +157,38 @@ class TMDbDataLoader(BaseDataLoader):
 
         logger.info(f"Fetch phim từ {start_year}–{end_year}")
 
-        all_movies = []
+        # 1. Lấy danh sách ID phim theo năm (vẫn chạy tuần tự để tránh quá tải trang discover)
+        # Có thể parallel phần này nếu muốn, nhưng phần details mới là bottleneck chính.
+        all_movies_basic = []
         for year in range(start_year, end_year + 1):
-            all_movies.extend(self.fetch_movies_by_year(year))
+            all_movies_basic.extend(self.fetch_movies_by_year(year))
+        
+        logger.info(f"Đã tìm thấy {len(all_movies_basic)} phim thô. Bắt đầu fetch chi tiết (Parallel)...")
 
         detailed_movies = []
         min_budget = self.data_config["min_budget"]
         min_revenue = self.data_config["min_revenue"]
+        max_workers = self.data_config.get("max_workers", 5) # Default 5 threads để an toàn với rate limit (đa luồng)
 
-        for movie in tqdm(all_movies, desc="Fetching details"):
-            details = self.get_movie_details(movie["id"])
-            if not details:
-                continue
+        # 2. Parallel fetch details
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit tất cả các tasks
+            future_to_movie = {
+                executor.submit(self._fetch_single_movie_detail, m["id"], min_budget, min_revenue): m 
+                for m in all_movies_basic
+            }
 
-            if details.get("budget", 0) >= min_budget and details.get("revenue", 0) >= min_revenue:
-                detailed_movies.append(details)
+            # Duyệt kết quả khi hoàn thành
+            for future in tqdm(as_completed(future_to_movie), total=len(all_movies_basic), desc="Fetching details"):
+                try:
+                    result = future.result()
+                    if result:
+                        detailed_movies.append(result)
+                except Exception as e:
+                    logger.error(f"Lỗi thread fetch detail: {e}")
 
         self.movies_data = detailed_movies
+        logger.info(f"Hoàn tất. Thu được {len(self.movies_data)} phim đủ điều kiện.")
 
     def _extract_genres(self, genres_list):
         return "|".join([g["name"] for g in genres_list]) if genres_list else ""

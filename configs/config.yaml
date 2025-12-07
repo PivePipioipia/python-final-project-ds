@@ -1,6 +1,3 @@
-# Cấu hình toàn bộ dự án Movie Revenue Prediction
-
-# Cấu hình Thu thập Dữ liệu
 data_collection:
   start_year: 2010
   end_year: 2024
@@ -9,17 +6,16 @@ data_collection:
   max_movies_per_year: 500 
   language: "en" 
   
-# Cấu hình Tiền xử lý Dữ liệu
 preprocessing:
   # Xử lý Missing Values
-  numeric_imputation: "median"  # median, mean, hoặc zero
-  categorical_imputation: "most_frequent"  # most_frequent hoặc constant
+  numeric_imputation: "median" 
+  categorical_imputation: "most_frequent" 
   
-  # Xử lý Outliers (IQR method)
+  # Xử lý Outliers (IQR)
   outlier_detection:
     enabled: true
     method: "IQR"  # IQR hoặc zscore
-    iqr_multiplier: 3.0  # Hệ số nhân với IQR để xác định outlier
+    iqr_multiplier: 3.0 
     columns:
       - budget
       - revenue
@@ -37,32 +33,28 @@ preprocessing:
   
   # TF-IDF cho Overview
   tfidf:
-    max_features: 30  # Số lượng features tối đa từ TF-IDF
-    min_df: 2  # Từ phải xuất hiện ít nhất 2 documents
-    max_df: 0.8  # Từ không được xuất hiện quá 80% documents
-    ngram_range: [1, 2]  # Unigrams và bigrams
+    max_features: 30  
+    min_df: 2 
+    max_df: 0.8 
+    ngram_range: [1, 2] 
   
   # Scaling
-  scaling_method: "standard"  # standard hoặc minmax
+  scaling_method: "standard" 
   
   # Test Size
   test_size: 0.2
 
-# Cấu hình Model Training
 model_training:
-  # Random Seed cho Reproducibility
   random_state: 42
   
-  # Cross Validation
   cv_folds: 5
   
   # Optuna Optimization
   optuna:
-    n_trials: 50  # Số lượng trials cho mỗi model
-    timeout: 3600  # Timeout 1 giờ (3600 giây)
-    n_jobs: -1  # Sử dụng tất cả CPU cores
+    n_trials: 50 
+    timeout: 3600  
+    n_jobs: -1 
     
-  # Model-specific configurations
   models:
     random_forest:
       param_space:
@@ -91,18 +83,16 @@ model_training:
         subsample: [0.6, 1.0]
         colsample_bytree: [0.6, 1.0]
 
-# Cấu hình Visualization
+#Visualization
 visualization:
   figure_size: [12, 8]
   dpi: 300
   style: "seaborn-v0_8-darkgrid"
   color_palette: "husl"
-  save_format: "png"  # png, jpg, hoặc svg
+  save_format: "png"  
   
-  # Feature Importance
   top_n_features: 15  # Hiển thị top 15 features quan trọng nhất
 
-# Cấu hình Đường dẫn
 paths:
   raw_data: "data/raw"
   processed_data: "data/processed"

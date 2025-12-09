@@ -66,7 +66,7 @@ class TMDbDataLoader(BaseDataLoader):
         """
         return TMDbDataLoader.load_from_csv(filepath)
 
-    def _make_request(self, endpoint: str, params: Optional[Dict] = None) -> Dict:
+    def _make_request(self, endpoint: str, params: Optional[Dict] = None, retries: int = 4) -> Dict:
         if params is None:
             params = {}
 
@@ -82,16 +82,25 @@ class TMDbDataLoader(BaseDataLoader):
         except requests.exceptions.HTTPError as e:
             if response.status_code == 401:
                 logger.error("API key không hợp lệ.")
+                raise
             elif response.status_code == 429:
-                logger.warning("Rate limit — đợi 10 giây...")
-                time.sleep(10)
-                return self._make_request(endpoint, params)
+                if retries > 0:
+                    logger.warning(f"Rate limit — đợi 10 giây... (Còn {retries} lần thử)")
+                    time.sleep(10)
+                    return self._make_request(endpoint, params, retries - 1)
+                else:
+                    logger.error("Hết lượt thử lại (Max retries exceeded).")
+                    raise
             else:
                 logger.error(f"HTTP Error: {e}")
-            raise
+                raise
 
         except requests.exceptions.RequestException as e:
-            logger.error(f"Request failed: {e}")
+            if retries > 0:
+                logger.warning(f"Request failed: {e}. Retrying... (Còn {retries} lần thử)")
+                time.sleep(2)
+                return self._make_request(endpoint, params, retries - 1)
+            logger.error(f"Request failed sau cùng: {e}")
             raise
 
     def fetch_movies_by_year(self, year: int) -> List[Dict]:
@@ -240,8 +249,7 @@ class TMDbDataLoader(BaseDataLoader):
     def __repr__(self):
         return f"TMDbDataLoader(movies={len(self.movies_data)})"
 
-
 if __name__ == "__main__":
     loader = TMDbDataLoader()
-    loader.fetch_data(start_year=2020, end_year=2021)
+    loader.fetch_data(start_year=2015, end_year=2024)
     loader.save_data("data/raw/movies.csv")

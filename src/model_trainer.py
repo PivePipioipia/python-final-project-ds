@@ -115,23 +115,33 @@ class ModelTrainer:
     ) -> None:
         """
         Load dữ liệu đã được preprocess vào trainer.
+        Dữ liệu đầu vào đã được xử lý hoàn chỉnh, không cần transform thêm.
         
         Args:
             X_train (np.ndarray): Training features
             X_test (np.ndarray): Test features
-            y_train (np.ndarray): Training target
-            y_test (np.ndarray): Test target
+            y_train (np.ndarray): Training target (log-transformed)
+            y_test (np.ndarray): Test target (log-transformed)
         """
         self.X_train = X_train
         self.X_test = X_test
-        self.y_train = y_train
-        self.y_test = y_test
+        self.y_train_log = y_train
+        self.y_test_log = y_test
         
-        self.y_train_log = np.log1p(self.y_train)
-        self.y_test_log = np.log1p(self.y_test)
+        # Inverse transform để có cả version gốc cho evaluation
+        self.y_train = np.expm1(y_train)
+        self.y_test = np.expm1(y_test)
         
         logger.info(
             f"Đã load data - Train: {X_train.shape}, Test: {X_test.shape}"
+        )
+        logger.info(
+            f"Target range (original): "
+            f"[${self.y_train.min():,.0f}, ${self.y_train.max():,.0f}]"
+        )
+        logger.info(
+            f"Target range (log): "
+            f"[{self.y_train_log.min():.2f}, {self.y_train_log.max():.2f}]"
         )
     
     def split_data(
@@ -157,8 +167,19 @@ class ModelTrainer:
             random_state=self.random_state
         )
 
-        self.y_train_log = np.log1p(self.y_train)
-        self.y_test_log = np.log1p(self.y_test)
+        if y_is_log:
+            self.y_train_log = y_train
+            self.y_test_log = y_test
+            self.y_train = np.expm1(y_train)
+            self.y_test = np.expm1(y_test)
+        else:
+            self.y_train = y_train
+            self.y_test = y_test
+            self.y_train_log = np.log1p(y_train)
+            self.y_test_log = np.log1p(y_test)
+        
+        self.X_train = X_train
+        self.X_test = X_test
         
         logger.info(
             f"Đã split data - Train: {self.X_train.shape}, Test: {self.X_test.shape}"
@@ -168,28 +189,44 @@ class ModelTrainer:
         self, 
         model: Any,
         X_test: np.ndarray,
-        y_test: np.ndarray
+        y_test: np.ndarray,
+        y_test_log: Optional[np.ndarray] = None
     ) -> Dict[str, float]:
         """
         Đánh giá model trên test set với nhiều metrics.
         
         """
+        # Model predict log(revenue)
         y_pred_log = model.predict(X_test)
         
+        # Inverse transform về scale gốc
         y_pred = np.expm1(y_pred_log)
         y_pred = np.maximum(y_pred, 0)
         
+        # Metrics trên scale gốc
         rmse = np.sqrt(mean_squared_error(y_test, y_pred))
         mae = mean_absolute_error(y_test, y_pred)
         r2 = r2_score(y_test, y_pred)
-        mape = np.mean(np.abs((y_test - y_pred) / (y_test + 1e-10))) * 100
+        mape = np.mean(np.abs((y_test - y_pred) / (y_test + 1))) * 100
         
-        return {
+        metrics = {
             'RMSE': rmse,
             'MAE': mae,
             'R2': r2,
             'MAPE': mape
         }
+        
+        # Metrics trên log scale (để đánh giá model)
+        if y_test_log is not None:
+            rmse_log = np.sqrt(mean_squared_error(y_test_log, y_pred_log))
+            mae_log = mean_absolute_error(y_test_log, y_pred_log)
+            r2_log = r2_score(y_test_log, y_pred_log)
+            
+            metrics['RMSE_log'] = rmse_log
+            metrics['MAE_log'] = mae_log
+            metrics['R2_log'] = r2_log
+        
+        return metrics
 
     def evaluate(self) -> Dict[str, Dict[str, float]]:
         """
@@ -203,22 +240,61 @@ class ModelTrainer:
             raise RuntimeError("Chưa có model nào được train để evaluate.")
         return self.results
 
-    
-    def _optimize_random_forest(self) -> Tuple[Any, Dict[str, Any]]:
-        logger.info("Bắt đầu optimize RandomForest với Optuna...")
-        
-        def objective(trial):
+
+    def _get_search_space(self, trial: optuna.Trial, model_name: str) -> Dict[str, Any]:
+        """
+        Helper method để lấy search space dựa trên model name từ config.
+        """
+        config = self.model_config['models'][model_name]['param_space']
+        params = {}
+
+        if model_name == 'random_forest':
             params = {
-                'n_estimators': trial.suggest_int('n_estimators', 100, 500),
-                'max_depth': trial.suggest_int('max_depth', 10, 50),
-                'min_samples_split': trial.suggest_int('min_samples_split', 2, 10),
-                'min_samples_leaf': trial.suggest_int('min_samples_leaf', 1, 4),
-                'max_features': trial.suggest_categorical('max_features', ['sqrt', 'log2']),
+                'n_estimators': trial.suggest_int('n_estimators', config['n_estimators'][0], config['n_estimators'][1]),
+                'max_depth': trial.suggest_int('max_depth', config['max_depth'][0], config['max_depth'][1]),
+                'min_samples_split': trial.suggest_int('min_samples_split', config['min_samples_split'][0], config['min_samples_split'][1]),
+                'min_samples_leaf': trial.suggest_int('min_samples_leaf', config['min_samples_leaf'][0], config['min_samples_leaf'][1]),
+                'max_features': trial.suggest_categorical('max_features', config['max_features']),
                 'random_state': self.random_state,
                 'n_jobs': -1
             }
-            
-            model = RandomForestRegressor(**params)
+        elif model_name == 'xgboost':
+            params = {
+                'n_estimators': trial.suggest_int('n_estimators', config['n_estimators'][0], config['n_estimators'][1]),
+                'max_depth': trial.suggest_int('max_depth', config['max_depth'][0], config['max_depth'][1]),
+                'learning_rate': trial.suggest_float('learning_rate', config['learning_rate'][0], config['learning_rate'][1]),
+                'subsample': trial.suggest_float('subsample', config['subsample'][0], config['subsample'][1]),
+                'colsample_bytree': trial.suggest_float('colsample_bytree', config['colsample_bytree'][0], config['colsample_bytree'][1]),
+                'min_child_weight': trial.suggest_int('min_child_weight', config['min_child_weight'][0], config['min_child_weight'][1]),
+                'random_state': self.random_state,
+                'n_jobs': -1,
+                'verbosity': 0
+            }
+        elif model_name == 'lightgbm':
+            params = {
+                'n_estimators': trial.suggest_int('n_estimators', config['n_estimators'][0], config['n_estimators'][1]),
+                'max_depth': trial.suggest_int('max_depth', config['max_depth'][0], config['max_depth'][1]),
+                'learning_rate': trial.suggest_float('learning_rate', config['learning_rate'][0], config['learning_rate'][1]),
+                'num_leaves': trial.suggest_int('num_leaves', config['num_leaves'][0], config['num_leaves'][1]),
+                'min_child_samples': trial.suggest_int('min_child_samples', config['min_child_samples'][0], config['min_child_samples'][1]),
+                'subsample': trial.suggest_float('subsample', config['subsample'][0], config['subsample'][1]),
+                'colsample_bytree': trial.suggest_float('colsample_bytree', config['colsample_bytree'][0], config['colsample_bytree'][1]),
+                'random_state': self.random_state,
+                'n_jobs': -1,
+                'verbosity': -1
+            }
+        
+        return params
+
+    def _optimize_model(self, model_class: Any, model_name: str) -> Tuple[Any, Dict[str, Any]]:
+        """
+        Hàm generic để tối ưu hóa bất kỳ model nào sử dụng Optuna.
+        """
+        logger.info(f"Bắt đầu optimize {model_name.upper()} với Optuna...")
+
+        def objective(trial):
+            params = self._get_search_space(trial, model_name)
+            model = model_class(**params)
             
             scores = cross_val_score(
                 model, 
@@ -228,142 +304,45 @@ class ModelTrainer:
                 scoring='neg_root_mean_squared_error',
                 n_jobs=-1
             )
-            
-            return -scores.mean() 
-        
+            return -scores.mean()
+
         study = optuna.create_study(
             direction='minimize',
             sampler=TPESampler(seed=self.random_state)
         )
-        
+
         study.optimize(
             objective,
             n_trials=self.model_config['optuna']['n_trials'],
             timeout=self.model_config['optuna']['timeout'],
             show_progress_bar=True
         )
-        
+
         best_params = study.best_params
+        # Add lại các tham số cố định (vì study.best_params chỉ chứa các tham số search)
         best_params['random_state'] = self.random_state
         best_params['n_jobs'] = -1
-        
-        best_model = RandomForestRegressor(**best_params)
+        if model_name == 'xgboost':
+            best_params['verbosity'] = 0
+        elif model_name == 'lightgbm':
+            best_params['verbosity'] = -1
+
+        best_model = model_class(**best_params)
         best_model.fit(self.X_train, self.y_train_log)
-        
-        logger.info(f"RandomForest - Best RMSE: {study.best_value:.2f}")
-        logger.info(f"RandomForest - Best params: {best_params}")
-        
+
+        logger.info(f"{model_name.upper()} - Best RMSE: {study.best_value:.2f}")
+        logger.info(f"{model_name.upper()} - Best params: {best_params}")
+
         return best_model, best_params
-    
+
+    def _optimize_random_forest(self) -> Tuple[Any, Dict[str, Any]]:
+        return self._optimize_model(RandomForestRegressor, 'random_forest')
+
     def _optimize_xgboost(self) -> Tuple[Any, Dict[str, Any]]:
-  
-        logger.info("Bắt đầu optimize XGBoost với Optuna...")
-        
-        def objective(trial):
-            params = {
-                'n_estimators': trial.suggest_int('n_estimators', 100, 500),
-                'max_depth': trial.suggest_int('max_depth', 3, 10),
-                'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.3),
-                'subsample': trial.suggest_float('subsample', 0.6, 1.0),
-                'colsample_bytree': trial.suggest_float('colsample_bytree', 0.6, 1.0),
-                'min_child_weight': trial.suggest_int('min_child_weight', 1, 7),
-                'random_state': self.random_state,
-                'n_jobs': -1,
-                'verbosity': 0
-            }
-            
-            model = xgb.XGBRegressor(**params)
-            
-            scores = cross_val_score(
-                model,
-                self.X_train,
-                self.y_train_log,
-                cv=self.model_config['cv_folds'],
-                scoring='neg_root_mean_squared_error',
-                n_jobs=-1
-            )
-            
-            return -scores.mean()
-        
-        study = optuna.create_study(
-            direction='minimize',
-            sampler=TPESampler(seed=self.random_state)
-        )
-        
-        study.optimize(
-            objective,
-            n_trials=self.model_config['optuna']['n_trials'],
-            timeout=self.model_config['optuna']['timeout'],
-            show_progress_bar=True
-        )
-        
-        best_params = study.best_params
-        best_params['random_state'] = self.random_state
-        best_params['n_jobs'] = -1
-        best_params['verbosity'] = 0
-        
-        best_model = xgb.XGBRegressor(**best_params)
-        best_model.fit(self.X_train, self.y_train_log)
-        
-        logger.info(f"XGBoost - Best RMSE: {study.best_value:.2f}")
-        logger.info(f"XGBoost - Best params: {best_params}")
-        
-        return best_model, best_params
-    
+        return self._optimize_model(xgb.XGBRegressor, 'xgboost')
+
     def _optimize_lightgbm(self) -> Tuple[Any, Dict[str, Any]]:
-        logger.info("Bắt đầu optimize LightGBM với Optuna...")
-        
-        def objective(trial):
-            params = {
-                'n_estimators': trial.suggest_int('n_estimators', 100, 500),
-                'max_depth': trial.suggest_int('max_depth', 3, 10),
-                'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.3),
-                'num_leaves': trial.suggest_int('num_leaves', 20, 100),
-                'min_child_samples': trial.suggest_int('min_child_samples', 10, 50),
-                'subsample': trial.suggest_float('subsample', 0.6, 1.0),
-                'colsample_bytree': trial.suggest_float('colsample_bytree', 0.6, 1.0),
-                'random_state': self.random_state,
-                'n_jobs': -1,
-                'verbosity': -1
-            }
-            
-            model = lgb.LGBMRegressor(**params)
-            
-            scores = cross_val_score(
-                model,
-                self.X_train,
-                self.y_train_log,
-                cv=self.model_config['cv_folds'],
-                scoring='neg_root_mean_squared_error',
-                n_jobs=-1
-            )
-            
-            return -scores.mean()
-        
-        study = optuna.create_study(
-            direction='minimize',
-            sampler=TPESampler(seed=self.random_state)
-        )
-        
-        study.optimize(
-            objective,
-            n_trials=self.model_config['optuna']['n_trials'],
-            timeout=self.model_config['optuna']['timeout'],
-            show_progress_bar=True
-        )
-        
-        best_params = study.best_params
-        best_params['random_state'] = self.random_state
-        best_params['n_jobs'] = -1
-        best_params['verbosity'] = -1
-        
-        best_model = lgb.LGBMRegressor(**best_params)
-        best_model.fit(self.X_train, self.y_train_log)
-        
-        logger.info(f"LightGBM - Best RMSE: {study.best_value:.2f}")
-        logger.info(f"LightGBM - Best params: {best_params}")
-        
-        return best_model, best_params
+        return self._optimize_model(lgb.LGBMRegressor, 'lightgbm')
     
     def optimize_params(self, model_name: str) -> Dict[str, Any]:
         """
@@ -417,7 +396,12 @@ class ModelTrainer:
         elif model_name == 'lightgbm':
             model, params = self._optimize_lightgbm()
         
-        metrics = self._evaluate_model(model, self.X_test, self.y_test)
+        metrics = self._evaluate_model(
+            model, 
+            self.X_test, 
+            self.y_test,
+            self.y_test_log
+        )
         
         self.models[model_name] = model
         self.best_params[model_name] = params
@@ -585,6 +569,41 @@ class ModelTrainer:
             f"best_model={best}"
             f")"
         )
+
+    def evaluate_external_model(
+        self, 
+        model: Any,
+        X_test: np.ndarray,
+        y_test: np.ndarray,
+        y_test_log: Optional[np.ndarray] = None,
+        preprocessor: Optional[Any] = None
+    ) -> Dict[str, float]:
+        """
+        PUBLIC method để evaluate model từ bên ngoài
+        
+        Args:
+            model: Trained model
+            X_test: Test features
+            y_test: Test target (scale GỐC)
+            y_test_log: Test target (log scale), optional
+            preprocessor: DataPreprocessor instance, optional
+            
+        Returns:
+            Dictionary of metrics
+        """
+        # Nếu chỉ có y_test (scale gốc), tạo y_test_log
+        if y_test_log is None and y_test.max() > 50:
+            y_test_log = np.log1p(y_test)
+        
+        # Nếu chỉ có y_test_log, inverse transform
+        if y_test_log is not None and y_test.max() < 50:
+            if preprocessor is not None:
+                y_test = preprocessor.inverse_transform_target(y_test_log)
+            else:
+                y_test = np.expm1(y_test_log)
+        
+        return self._evaluate_model(model, X_test, y_test, y_test_log)
+
 
 
 if __name__ == "__main__":

@@ -49,7 +49,7 @@ class TMDbDataLoader(BaseDataLoader):
     def fetch_data(self, *args, start_year=None, end_year=None, **kwargs):
         """
         Override của BaseDataLoader.fetch_data()
-        Gọi hàm fetch_movies() để tương thích code cũ.
+        Gọi hàm fetch_movies()
         """
         self.fetch_movies(start_year=start_year, end_year=end_year)
 

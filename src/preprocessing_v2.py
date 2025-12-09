@@ -253,10 +253,13 @@ class DataPreprocessorV2(BasePreprocessor):
         df = self._add_derived_features(df)
         df = self._select_features_for_modeling(df)
         
-        if self.scaler:
-             # Ensure columns match exactly what scaler was fitted on
-            df = df.reindex(columns=self.feature_names, fill_value=0)
+        # Reorder columns to match fit
+        missing_cols = set(self.feature_names) - set(df.columns)
+        for c in missing_cols:
+            df[c] = 0 # Điền 0 cho feature thiếu (e.g. Genre mới lạ)
             
+        df = df[self.feature_names] 
+        
         X = self.scaler.transform(df)
         return X, y
 

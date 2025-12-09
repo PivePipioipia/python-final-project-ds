@@ -1,27 +1,32 @@
+# Python ignores
 __pycache__/
-*.py[cod]
-*$py.class
+*.pyc
+*.pyo
+*.pyd
+
+# Jupyter Notebook
 .ipynb_checkpoints/
+
+# IDE
 .vscode/
 
+# Environment
+.env
 env/
 venv/
 movie_env/
 movie_env2/
-.env
-*.env
 
-data/raw/
-data/processed/
-models/*.pkl
-notebooks/models/*.pkl
-*.pkl
-
-
-*.log
+# OS
 .DS_Store
-Thumbs.db
 
+# Database
+*.sqlite3
+*.db
+
+# Logs
+*.log
+
+# Archives
 *.zip
 *.rar
-*.tar.gz

@@ -18,7 +18,7 @@ import joblib
 import os
 
 from src.base_preprocessing import BasePreprocessor  
-
+# Setup logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -146,10 +146,16 @@ class DataPreprocessor(BasePreprocessor):
                     df[col] = df[col].fillna(0)
 
         # Xử lý categorical/text columns
-        text_cols = ['overview', 'genres', 'production_companies']
+        text_cols = self.preprocess_config.get('text_columns', [])
         for col in text_cols:
             if col in df.columns:
                 df[col] = df[col].fillna('')
+
+        # Xử lý explicitly cho genres và overview (critical for downstream processing)
+        if 'genres' in df.columns:
+            df['genres'] = df['genres'].fillna('')
+        if 'overview' in df.columns:
+            df['overview'] = df['overview'].fillna('')
 
         # Xử lý release_date
         if 'release_date' in df.columns:
@@ -248,7 +254,10 @@ class DataPreprocessor(BasePreprocessor):
             logger.warning("Không tìm thấy cột genres")
             return df
 
-        genres_lists = df['genres'].apply(lambda x: x.split('|') if x else [])
+        # Fix: Handle NaN values properly - check if string type AND not empty
+        genres_lists = df['genres'].apply(
+            lambda x: x.split('|') if isinstance(x, str) and x else []
+        )
 
         if fit:
             genres_encoded = self.mlb_genres.fit_transform(genres_lists)
@@ -338,6 +347,17 @@ class DataPreprocessor(BasePreprocessor):
 
         return df
 
+    def _prepare_data(self, df: pd.DataFrame, extract_target: bool = True):
+        """Helper method để chuẩn hóa cách xử lý target."""
+        df = df.copy()
+        y_series = None
+        
+        if extract_target and self.target_col in df.columns:
+            y_series = df[self.target_col].copy()
+            df = df.drop(columns=[self.target_col])
+        
+        return df, y_series
+
     def fit(self, df: pd.DataFrame) -> "DataPreprocessor":
         """
         Fit preprocessor trên training data.
@@ -355,12 +375,18 @@ class DataPreprocessor(BasePreprocessor):
         logger.info("Bắt đầu fit preprocessing pipeline...")
 
         df = df.copy()
+        # Extract target trước để outlier detection chỉ dựa vào X
+        df, y_series = self._prepare_data(df, extract_target=False)
 
         # 1. Handle missing values
         df = self._handle_missing_values(df)
 
         # 2. Remove outliers (chỉ fit trên train)
         df = self._detect_and_remove_outliers(df)
+
+        # Đồng bộ y với df sau khi loại outliers (giả sử index là RangeIndex)
+        if y_series is not None:
+            y_series = y_series.loc[df.index]
 
         # 3. Engineer date features
         df = self._engineer_date_features(df)
@@ -405,7 +431,8 @@ class DataPreprocessor(BasePreprocessor):
         # Lưu target nếu có
         y = None
         if self.target_col in df.columns:
-            y = df[self.target_col].values
+            y_series = df[self.target_col].copy()  # Giữ index
+            df = df.drop(columns=[self.target_col])
 
         # 1. Handle missing values
         df = self._handle_missing_values(df)
@@ -414,9 +441,9 @@ class DataPreprocessor(BasePreprocessor):
         if remove_outliers:
             original_index = df.index
             df = self._detect_and_remove_outliers(df)
-            if y is not None:
+            if y_series is not None:
                 # Đồng bộ y với df sau khi loại outliers (giả sử index là RangeIndex)
-                y = y[df.index]
+                y_series = y_series.loc[df.index]
 
         # 3. Engineer date features
         df = self._engineer_date_features(df)
@@ -435,6 +462,8 @@ class DataPreprocessor(BasePreprocessor):
 
         # 8. Transform với scaler
         X = self.scaler.transform(df)
+        if y_series is not None:
+            y = np.log1p(y_series.values)
 
         logger.info(f"Đã transform data với shape: {X.shape}")
         return X, y
@@ -492,6 +521,12 @@ class DataPreprocessor(BasePreprocessor):
         preprocessor = joblib.load(filepath)
         logger.info(f"Đã load preprocessor từ: {filepath}")
         return preprocessor
+
+    def inverse_transform_target(self, y_log: np.ndarray) -> np.ndarray:
+        """
+        Inverse transform target từ log scale về original scale.
+        """
+        return np.expm1(y_log)
 
     # get_feature_names() đã có sẵn từ BasePreprocessor,
     # nhưng vẫn giữ lại cho rõ ràng nếu bạn muốn dùng trực tiếp.

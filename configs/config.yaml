@@ -2,20 +2,23 @@ data_collection:
   start_year: 2010
   end_year: 2024
   min_budget: 1000000  
-  min_revenue: 1000 
+  min_revenue: 100000 
   max_movies_per_year: 500 
   language: "en" 
   
 preprocessing:
   # Xử lý Missing Values
-  numeric_imputation: "median" 
-  categorical_imputation: "most_frequent" 
+  numeric_imputation: "median"  # median, mean, hoặc zero
+  categorical_imputation: "most_frequent"  # most_frequent hoặc constant
+  text_columns: ['overview', 'genres', 'production_companies']
+  date_column: 'release_date'
+  categorical_columns: ['original_language', 'status']
   
   # Xử lý Outliers (IQR)
   outlier_detection:
     enabled: true
     method: "IQR"  # IQR hoặc zscore
-    iqr_multiplier: 3.0 
+    iqr_multiplier: 5.0  # Hệ số nhân với IQR để xác định outlier (vì dữ liệu ngoại lai là dữ liệu quý đối với phim)
     columns:
       - budget
       - revenue
@@ -33,10 +36,10 @@ preprocessing:
   
   # TF-IDF cho Overview
   tfidf:
-    max_features: 30  
-    min_df: 2 
-    max_df: 0.8 
-    ngram_range: [1, 2] 
+    max_features: 30  # Số lượng features tối đa từ TF-IDF
+    min_df: 5  # Từ phải xuất hiện ít nhất 5 documents
+    max_df: 0.8  # Từ không được xuất hiện quá 80% documents
+    ngram_range: [1, 2]  # Unigrams và bigrams
   
   # Scaling
   scaling_method: "standard" 
@@ -59,10 +62,10 @@ model_training:
     random_forest:
       param_space:
         n_estimators: [100, 500]
-        max_depth: [10, 50]
+        max_depth: [10, 100] # Increased upper bound
         min_samples_split: [2, 10]
-        min_samples_leaf: [1, 4]
-        max_features: ["sqrt", "log2"]
+        min_samples_leaf: [1, 10] # Allow 1 (default)
+        max_features: ["sqrt", "log2", 1.0] # Add 1.0 (all features)
     
     xgboost:
       param_space:
@@ -76,7 +79,7 @@ model_training:
     lightgbm:
       param_space:
         n_estimators: [100, 500]
-        max_depth: [3, 10]
+        max_depth: [3, 15]
         learning_rate: [0.01, 0.3]
         num_leaves: [20, 100]
         min_child_samples: [10, 50]

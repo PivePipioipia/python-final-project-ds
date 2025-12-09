@@ -26,6 +26,8 @@ from src.data_loader import TMDbDataLoader
 from src.preprocessing import DataPreprocessor
 from src.model_trainer import ModelTrainer
 from src.visualizer import Visualizer
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
 # Setup logging
 logging.basicConfig(
@@ -42,9 +44,6 @@ logger = logging.getLogger(__name__)
 def fetch_data(args):
     """
     Fetch dữ liệu từ TMDb API và lưu vào file CSV.
-    
-    Args:
-        args: Arguments từ argparse
     """
     logger.info("="*60)
     logger.info("BẮT ĐẦU FETCH DATA TỪ TMDB API")
@@ -53,17 +52,14 @@ def fetch_data(args):
     try:
         # Khởi tạo loader
         loader = TMDbDataLoader()
-        
         # Fetch movies
         loader.fetch_movies(
             start_year=args.start_year,
             end_year=args.end_year
         )
-        
         # Lưu vào CSV
-        output_path = args.output or "data/raw/movies_2020_2024.csv"
+        output_path = args.output or "data/raw/movies_2010_2024.csv"
         loader.save_to_csv(output_path)
-        
         logger.info("Đã hoàn thành fetch data thành công")
         
     except Exception as e:
@@ -84,26 +80,36 @@ def preprocess_data(args):
     
     try:
         # Load raw data
-        input_path = args.input or "data/raw/movies_2020_2024.csv"
+        input_path = args.input or "data/raw/movies_2010_2024.csv"
         logger.info(f"Loading data từ: {input_path}")
         df = pd.read_csv(input_path)
         
         # Khởi tạo preprocessor
         preprocessor = DataPreprocessor()
         
-        # Split data trước khi preprocess
-        # (để tránh data leakage khi remove outliers)
-        train_size = int(len(df) * 0.8)
-        train_df = df.iloc[:train_size].copy()
-        test_df = df.iloc[train_size:].copy()
+        # Load config để lấy test_size
+        config_path = "configs/config.yaml"
+        if Path(config_path).exists():
+            import yaml
+            with open(config_path, 'r', encoding='utf-8') as f:
+                config = yaml.safe_load(f)
+            test_size = config.get('preprocessing', {}).get('test_size', 0.2)
+        else:
+            test_size = 0.2
+            
+        # Split data trước khi preprocess (Random split để tránh temporal bias)
+        train_df, test_df = train_test_split(df, test_size=test_size, random_state=42, shuffle=True)
         
+        train_df = train_df.reset_index(drop=True)
+        test_df = test_df.reset_index(drop=True)
+
         logger.info(f"Train size: {len(train_df)}, Test size: {len(test_df)}")
         
         # Fit và transform training data
-        X_train, y_train = preprocessor.fit_transform(train_df)
+        X_train, y_train_log = preprocessor.fit_transform(train_df)
         
         # Transform test data (không remove outliers)
-        X_test, y_test = preprocessor.transform(test_df, remove_outliers=False)
+        X_test, y_test_log = preprocessor.transform(test_df, remove_outliers=False)
         
         # Lưu processed data
         output_dir = args.output or "data/processed"
@@ -112,12 +118,12 @@ def preprocess_data(args):
         preprocessor.save_processed_data(
             X_train, 
             f"{output_dir}/X_train.csv",
-            y_train
+            y_train_log
         )
         preprocessor.save_processed_data(
             X_test,
             f"{output_dir}/X_test.csv",
-            y_test
+            y_test_log
         )
         
         # Lưu preprocessor object
@@ -132,13 +138,9 @@ def preprocess_data(args):
         logger.error(f"Lỗi khi preprocessing: {e}")
         sys.exit(1)
 
-
 def train_model(args):
     """
     Train một hoặc tất cả các models.
-    
-    Args:
-        args: Arguments từ argparse
     """
     logger.info("="*60)
     logger.info("BẮT ĐẦU TRAINING MODELS")
@@ -155,9 +157,9 @@ def train_model(args):
         
         # Tách X và y
         X_train = train_data.drop(columns=['revenue']).values
-        y_train = train_data['revenue'].values
+        y_train = train_data['revenue'].values # log scale
         X_test = test_data.drop(columns=['revenue']).values
-        y_test = test_data['revenue'].values
+        y_test = test_data['revenue'].values # log scale
         
         # Khởi tạo trainer
         trainer = ModelTrainer()
@@ -169,7 +171,7 @@ def train_model(args):
         else:
             trainer.train_model(args.model)
         
-        # So sánh models (nếu train nhiều models)
+        # So sánh models
         if len(trainer.models) > 1:
             comparison_df = trainer.compare_models()
             comparison_df.to_csv("results/model_comparison.csv")
@@ -185,47 +187,50 @@ def train_model(args):
         logger.error(f"Lỗi khi training: {e}")
         sys.exit(1)
 
-
 def evaluate_model(args):
     """
     Evaluate model đã train trên test set.
-    
-    Args:
-        args: Arguments từ argparse
     """
     logger.info("="*60)
     logger.info("BẮT ĐẦU EVALUATION")
     logger.info("="*60)
     
     try:
-        # Load model
-        model_path = args.model_path or "models/random_forest.pkl"
-        logger.info(f"Loading model từ: {model_path}")
-        model = ModelTrainer.load_model(model_path)
+        # Load 
+        model = ModelTrainer.load_model(args.model_path or "models/random_forest.pkl")
+        preprocessor = DataPreprocessor.load_preprocessor("models/preprocessor.pkl")
         
-        # Load test data
-        data_dir = args.data_dir or "data/processed"
-        test_data = pd.read_csv(f"{data_dir}/X_test.csv")
-        
+        test_data = pd.read_csv(f"{args.data_dir or 'data/processed'}/X_test.csv")
         X_test = test_data.drop(columns=['revenue']).values
-        y_test = test_data['revenue'].values
+        y_test_log = test_data['revenue'].values
+        y_test = preprocessor.inverse_transform_target(y_test_log)
+        
+        # Gọi public method
+        trainer = ModelTrainer()
+        metrics = trainer.evaluate_external_model(
+            model=model,
+            X_test=X_test,
+            y_test=y_test,
+            y_test_log=y_test_log,
+            preprocessor=preprocessor
+        )
         
         # Predict
-        y_pred = model.predict(X_test)
+        y_pred_log = model.predict(X_test)
+        y_pred = preprocessor.inverse_transform_target(y_pred_log)
         
-        # Calculate metrics
-        from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-        
-        rmse = np.sqrt(mean_squared_error(y_test, y_pred))
-        mae = mean_absolute_error(y_test, y_pred)
-        r2 = r2_score(y_test, y_pred)
-        mape = np.mean(np.abs((y_test - y_pred) / (y_test + 1e-10))) * 100
-        
-        logger.info("\nTest Set Evaluation Results:")
-        logger.info(f"  RMSE: ${rmse:,.2f}")
-        logger.info(f"  MAE:  ${mae:,.2f}")
-        logger.info(f"  R2:   {r2:.4f}")
-        logger.info(f"  MAPE: {mape:.2f}%")
+        # Display results
+        logger.info("\n" + "="*60)
+        logger.info("Test Set Evaluation Results:")
+        logger.info("="*60)
+        for metric_name, value in metrics.items():
+            if 'log' not in metric_name.lower():
+                if metric_name in ['RMSE', 'MAE']:
+                    logger.info(f"  {metric_name}: ${value:,.0f}")
+                elif metric_name == 'MAPE':
+                    logger.info(f"  {metric_name}: {value:.2f}%")
+                else:
+                    logger.info(f"  {metric_name}: {value:.4f}")
         
         # Lưu predictions
         results_df = pd.DataFrame({
@@ -242,13 +247,9 @@ def evaluate_model(args):
         logger.error(f"Lỗi khi evaluation: {e}")
         sys.exit(1)
 
-
 def visualize_results(args):
     """
-    Tạo tất cả visualizations cho EDA và model results.
-    
-    Args:
-        args: Arguments từ argparse
+    Visualize với inverse transform
     """
     logger.info("="*60)
     logger.info("BẮT ĐẦU VISUALIZATION")
@@ -258,6 +259,9 @@ def visualize_results(args):
         # Khởi tạo visualizer
         viz = Visualizer()
         
+        # Load preprocessor
+        preprocessor = DataPreprocessor.load_preprocessor("models/preprocessor.pkl")
+        
         # Load data
         data_dir = args.data_dir or "data/processed"
         
@@ -266,15 +270,19 @@ def visualize_results(args):
             logger.info("Tạo EDA plots...")
             
             train_data = pd.read_csv(f"{data_dir}/X_train.csv")
-            y_train = train_data['revenue'].values
+            y_train_log = train_data['revenue'].values
+            
+            # Inverse transform để plot revenue gốc
+            y_train = preprocessor.inverse_transform_target(y_train_log)
             
             # Target distribution
-            viz.plot_target_distribution(y_train, "Revenue Distribution")
+            viz.plot_target_distribution(y_train, "Revenue Distribution (USD)")
             viz.save_plot("visualizations/eda_plots/revenue_distribution.png")
             viz.close_all()
             
-            # Correlation matrix
-            viz.plot_correlation_matrix(train_data, "Feature Correlations")
+            # Correlation matrix (dùng features only)
+            features_data = train_data.drop(columns=['revenue'])
+            viz.plot_correlation_matrix(features_data, "Feature Correlations")
             viz.save_plot("visualizations/eda_plots/correlation_matrix.png")
             viz.close_all()
             
@@ -284,10 +292,13 @@ def visualize_results(args):
         if args.plot_type in ['all', 'model']:
             logger.info("Tạo model result plots...")
             
-            # Load test data và predictions
+            # Load test data
             test_data = pd.read_csv(f"{data_dir}/X_test.csv")
             X_test = test_data.drop(columns=['revenue']).values
-            y_test = test_data['revenue'].values
+            y_test_log = test_data['revenue'].values
+            
+            # Inverse transform
+            y_test = preprocessor.inverse_transform_target(y_test_log)
             
             # Load models và generate plots
             models = ['random_forest', 'xgboost', 'lightgbm']
@@ -306,21 +317,23 @@ def visualize_results(args):
                 model = ModelTrainer.load_model(model_path)
                 
                 # Predict
-                y_pred = model.predict(X_test)
+                y_pred_log = model.predict(X_test)
                 
-                # Actual vs Predicted
+                # Inverse transform predictions
+                y_pred = preprocessor.inverse_transform_target(y_pred_log)
+                
+                # Actual vs Predicted (scale gốc)
                 viz.plot_actual_vs_predicted(y_test, y_pred, model_name)
                 viz.save_plot(f"visualizations/model_results/actual_vs_pred_{model_name}.png")
                 viz.close_all()
                 
-                # Residual Analysis
+                # Residual Analysis (scale gốc)
                 viz.plot_residuals(y_test, y_pred, model_name)
                 viz.save_plot(f"visualizations/model_results/residuals_{model_name}.png")
                 viz.close_all()
                 
                 # Feature Importance
                 if hasattr(model, 'feature_importances_'):
-                    preprocessor = DataPreprocessor.load_preprocessor("models/preprocessor.pkl")
                     feature_names = preprocessor.get_feature_names()
                     
                     trainer = ModelTrainer()
@@ -350,8 +363,9 @@ def visualize_results(args):
         
     except Exception as e:
         logger.error(f"Lỗi khi visualization: {e}")
+        import traceback
+        traceback.print_exc()
         sys.exit(1)
-
 
 def run_full_pipeline(args):
     """
@@ -366,10 +380,10 @@ def run_full_pipeline(args):
     
     try:
         # 1. Fetch Data (nếu chưa có)
-        raw_data_path = "data/raw/movies_2020_2024.csv"
+        raw_data_path = "data/raw/movies_2010_2024.csv"
         if not Path(raw_data_path).exists() or args.force_fetch:
             logger.info("\nStep 1: Fetching data from TMDb API...")
-            args.start_year = 2020
+            args.start_year = 2010
             args.end_year = 2024
             args.output = raw_data_path
             fetch_data(args)
@@ -407,7 +421,6 @@ def run_full_pipeline(args):
     except Exception as e:
         logger.error(f"Lỗi trong full pipeline: {e}")
         sys.exit(1)
-
 
 def main():
     """
@@ -452,8 +465,8 @@ Examples:
     fetch_parser.add_argument(
         '--start-year',
         type=int,
-        default=2020,
-        help='Năm bắt đầu (default: 2020)'
+        default=2010,
+        help='Năm bắt đầu (default: 2010)'
     )
     fetch_parser.add_argument(
         '--end-year',
@@ -464,7 +477,7 @@ Examples:
     fetch_parser.add_argument(
         '--output',
         type=str,
-        help='Output file path (default: data/raw/movies_2020_2024.csv)'
+        help='Output file path (default: data/raw/movies_2010_2024.csv)'
     )
     
     # Preprocess Command

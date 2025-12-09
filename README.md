@@ -99,6 +99,8 @@ Tại sao lại cần phiên bản V2? Dưới đây là kết quả thực nghi
 
 ---
 
-
+Kích hoạt môi trường 
+C:\Users\PC\anaconda3\Scripts\activate.bat
+conda activate movie_v2
 
 © 2025 Movie Revenue Prediction Project.

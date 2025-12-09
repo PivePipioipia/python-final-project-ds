@@ -1,11 +1,12 @@
 """
 Movie Revenue Prediction Package
 
-Package này chứa toàn bộ các module cho dự án dự đoán doanh thu phim, bao gồm data loading, preprocessing, model training, và visualization.
-
 Modules:
+    - base_loader: Định nghĩa giao diện chung cho mọi DataLoader trong pipeline
     - data_loader: Thu thập dữ liệu từ TMDb API
-    - preprocessing: Tiền xử lý và feature engineering
+    - base_preprocessor: Định nghĩa giao diện chung cho mọi Preprocessor trong pipeline
+    - preprocessing: Tiền xử lý và feature engineering (basic)
+    - preprocessing_v2: Tiền xử lý và feature engineering (advanced)
     - model_trainer: Huấn luyện và tối ưu mô hình học máy
     - visualizer: Trực quan hóa dữ liệu và kết quả
 

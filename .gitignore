@@ -1,11 +1,9 @@
-# Python
 __pycache__/
 *.py[cod]
 *$py.class
 .ipynb_checkpoints/
 .vscode/
 
-# Environment
 env/
 venv/
 movie_env/
@@ -13,7 +11,6 @@ movie_env2/
 .env
 *.env
 
-# Large Data & Models
 data/raw/
 data/processed/
 models/*.pkl
@@ -21,12 +18,10 @@ notebooks/models/*.pkl
 *.pkl
 
 
-# Logs & OS
 *.log
 .DS_Store
 Thumbs.db
 
-# Archives
 *.zip
 *.rar
 *.tar.gz

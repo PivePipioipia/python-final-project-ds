@@ -65,12 +65,10 @@ class Visualizer:
         self.viz_config = self.config['visualization']
         self.save_dir = save_dir
         
-        # Tạo thư mục nếu chưa có
         Path(save_dir).mkdir(parents=True, exist_ok=True)
         Path(f"{save_dir}/eda_plots").mkdir(parents=True, exist_ok=True)
         Path(f"{save_dir}/model_results").mkdir(parents=True, exist_ok=True)
         
-        # Cấu hình matplotlib
         self.figsize = tuple(self.viz_config['figure_size'])
         self.dpi = self.viz_config['dpi']
         
@@ -92,14 +90,12 @@ class Visualizer:
         """
         fig, axes = plt.subplots(1, 2, figsize=self.figsize)
         
-        # Histogram
         axes[0].hist(y, bins=50, edgecolor='black', alpha=0.7)
         axes[0].set_xlabel('Revenue (USD)')
         axes[0].set_ylabel('Frequency')
         axes[0].set_title(f'{title} - Histogram')
         axes[0].grid(True, alpha=0.3)
         
-        # Box plot
         axes[1].boxplot(y, vert=True)
         axes[1].set_ylabel('Revenue (USD)')
         axes[1].set_title(f'{title} - Boxplot')
@@ -126,7 +122,6 @@ class Visualizer:
             title (str): Tiêu đề biểu đồ
             top_n (int): Số lượng features để hiển thị
         """
-        # Chọn top N features có correlation cao nhất với target (nếu có)
         if 'revenue' in df.columns:
             correlations = df.corr()['revenue'].abs().sort_values(ascending=False)
             top_features = correlations.head(top_n).index.tolist()
@@ -134,10 +129,8 @@ class Visualizer:
         else:
             df_subset = df.iloc[:, :top_n]
         
-        # Tính correlation matrix
         corr_matrix = df_subset.corr()
         
-        # Vẽ heatmap
         plt.figure(figsize=(self.figsize[0], self.figsize[0]))
         sns.heatmap(
             corr_matrix,
@@ -185,7 +178,6 @@ class Visualizer:
             ax.set_title(f'Distribution of {feature}')
             ax.grid(True, alpha=0.3)
         
-        # Ẩn các subplot thừa
         for idx in range(n_features, len(axes)):
             axes[idx].axis('off')
         
@@ -211,10 +203,8 @@ class Visualizer:
         if top_n is None:
             top_n = self.viz_config['top_n_features']
         
-        # Lấy top N features
         importance_df = importance_df.head(top_n).copy()
         
-        # Vẽ horizontal bar chart
         plt.figure(figsize=self.figsize)
         
         colors = plt.cm.viridis(np.linspace(0, 1, len(importance_df)))
@@ -233,7 +223,7 @@ class Visualizer:
             fontsize=14,
             fontweight='bold'
         )
-        plt.gca().invert_yaxis()  # Để feature quan trọng nhất ở trên
+        plt.gca().invert_yaxis()  
         plt.grid(True, alpha=0.3, axis='x')
         plt.tight_layout()
         
@@ -255,10 +245,8 @@ class Visualizer:
         """
         plt.figure(figsize=self.figsize)
         
-        # Scatter plot
         plt.scatter(y_true, y_pred, alpha=0.5, s=30, edgecolors='black', linewidths=0.5)
         
-        # Perfect prediction line
         min_val = min(y_true.min(), y_pred.min())
         max_val = max(y_true.max(), y_pred.max())
         plt.plot([min_val, max_val], [min_val, max_val], 'r--', linewidth=2, label='Perfect Prediction')
@@ -294,7 +282,6 @@ class Visualizer:
         
         fig, axes = plt.subplots(1, 2, figsize=self.figsize)
         
-        # Residual plot
         axes[0].scatter(y_pred, residuals, alpha=0.5, s=30, edgecolors='black', linewidths=0.5)
         axes[0].axhline(y=0, color='r', linestyle='--', linewidth=2)
         axes[0].set_xlabel('Predicted Revenue (USD)', fontsize=11)
@@ -302,7 +289,6 @@ class Visualizer:
         axes[0].set_title('Residual Plot', fontsize=12, fontweight='bold')
         axes[0].grid(True, alpha=0.3)
         
-        # Histogram of residuals
         axes[1].hist(residuals, bins=50, edgecolor='black', alpha=0.7)
         axes[1].axvline(x=0, color='r', linestyle='--', linewidth=2)
         axes[1].set_xlabel('Residuals (USD)', fontsize=11)
@@ -335,7 +321,6 @@ class Visualizer:
         if metric not in results_df.columns:
             raise ValueError(f"Metric {metric} không tồn tại trong results_df")
         
-        # Sort theo metric (ascending cho RMSE/MAE/MAPE, descending cho R2)
         ascending = metric != 'R2'
         results_sorted = results_df.sort_values(metric, ascending=ascending)
         
@@ -351,7 +336,6 @@ class Visualizer:
             linewidth=1.5
         )
         
-        # Thêm giá trị lên bars
         for bar in bars:
             width = bar.get_width()
             plt.text(
@@ -395,7 +379,6 @@ class Visualizer:
         for idx, metric in enumerate(metrics):
             ax = axes[idx]
             
-            # Sort theo metric
             ascending = metric != 'R2'
             results_sorted = results_df.sort_values(metric, ascending=ascending)
             
@@ -409,7 +392,6 @@ class Visualizer:
                 linewidth=1.5
             )
             
-            # Thêm giá trị
             for bar in bars:
                 width = bar.get_width()
                 label_format = '{:,.2f}' if metric != 'R2' else '{:.4f}'
@@ -488,10 +470,8 @@ class Visualizer:
         if dpi is None:
             dpi = self.dpi
         
-        # Tạo thư mục nếu chưa có
         Path(filepath).parent.mkdir(parents=True, exist_ok=True)
         
-        # Lưu plot
         plt.savefig(
             filepath,
             dpi=dpi,
@@ -519,14 +499,11 @@ class Visualizer:
         )
 
 if __name__ == "__main__":
-    # Khởi tạo visualizer
     viz = Visualizer()
     
-    # Giả sử có dữ liệu
     y_true = np.random.normal(100000, 50000, 1000)
     y_pred = y_true + np.random.normal(0, 20000, 1000)
     
-    # Vẽ các biểu đồ
     viz.plot_target_distribution(y_true, "Revenue Distribution")
     viz.save_plot("visualizations/eda_plots/revenue_dist.png")
     viz.close_all()

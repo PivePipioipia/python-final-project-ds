@@ -548,24 +548,18 @@ class DataPreprocessor(BasePreprocessor):
 
 
 if __name__ == "__main__":
-    # Điều chỉnh import cho đúng cấu trúc project của bạn
     from src.data_loader import TMDbDataLoader
 
-    # Load dữ liệu
     df = TMDbDataLoader.load_from_csv("data/raw/movies_2020_2024.csv")
 
-    # Khởi tạo preprocessor
     preprocessor = DataPreprocessor()
 
-    # Fit và transform
     X, y = preprocessor.fit_transform(df)
 
     print(f"X shape: {X.shape}")
     print(f"y shape: {y.shape}")
     print(f"Feature names: {preprocessor.get_feature_names()[:10]}...")
 
-    # Lưu processed data
     preprocessor.save_processed_data(X, "data/processed/X_train.csv", y)
 
-    # Lưu preprocessor
     preprocessor.save_preprocessor("models/preprocessor.pkl")

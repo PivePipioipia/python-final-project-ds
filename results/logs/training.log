@@ -1,0 +1,75 @@
+2025-12-10 19:14:02,324 - src.model_trainer - INFO - ModelTrainer đã được khởi tạo thành công
+2025-12-10 19:14:02,325 - src.model_trainer - INFO - Đã load data - Train: (2013, 65), Test: (517, 65)
+2025-12-10 19:14:02,325 - src.model_trainer - INFO - Target range (original): [$100,000, $2,068,223,624]
+2025-12-10 19:14:02,326 - src.model_trainer - INFO - Target range (log): [11.51, 21.45]
+2025-12-10 19:14:02,327 - src.model_trainer - INFO - 
+============================================================
+2025-12-10 19:14:02,327 - src.model_trainer - INFO - BẮT ĐẦU TRAINING TẤT CẢ MODELS
+2025-12-10 19:14:02,327 - src.model_trainer - INFO - ============================================================
+
+2025-12-10 19:14:02,327 - src.model_trainer - INFO - 
+============================================================
+2025-12-10 19:14:02,327 - src.model_trainer - INFO - Training RANDOM_FOREST
+2025-12-10 19:14:02,328 - src.model_trainer - INFO - ============================================================
+2025-12-10 19:14:02,328 - src.model_trainer - INFO - Bắt đầu optimize RANDOM_FOREST với Optuna...
+2025-12-10 19:16:00,134 - src.model_trainer - INFO - RANDOM_FOREST - Best RMSE: 1.19
+2025-12-10 19:16:00,136 - src.model_trainer - INFO - RANDOM_FOREST - Best params: {'n_estimators': 409, 'max_depth': 19, 'min_samples_split': 4, 'min_samples_leaf': 1, 'max_features': 'log2', 'random_state': 42, 'n_jobs': -1}
+2025-12-10 19:16:00,276 - src.model_trainer - INFO - 
+RANDOM_FOREST - Test Set Results:
+2025-12-10 19:16:00,278 - src.model_trainer - INFO -   RMSE: $113,143,001.07
+2025-12-10 19:16:00,279 - src.model_trainer - INFO -   MAE:  $52,632,040.23
+2025-12-10 19:16:00,279 - src.model_trainer - INFO -   R2:   0.7099
+2025-12-10 19:16:00,279 - src.model_trainer - INFO -   MAPE: 233.70%
+2025-12-10 19:16:00,279 - src.model_trainer - INFO - Training time: 117.95 seconds
+2025-12-10 19:16:00,279 - src.model_trainer - INFO - 
+============================================================
+2025-12-10 19:16:00,280 - src.model_trainer - INFO - Training XGBOOST
+2025-12-10 19:16:00,281 - src.model_trainer - INFO - ============================================================
+2025-12-10 19:16:00,281 - src.model_trainer - INFO - Bắt đầu optimize XGBOOST với Optuna...
+2025-12-10 19:17:06,738 - src.model_trainer - INFO - XGBOOST - Best RMSE: 1.17
+2025-12-10 19:17:06,739 - src.model_trainer - INFO - XGBOOST - Best params: {'n_estimators': 365, 'max_depth': 3, 'learning_rate': 0.03191570400415464, 'subsample': 0.8150793703873596, 'colsample_bytree': 0.822795405848997, 'min_child_weight': 1, 'random_state': 42, 'n_jobs': -1, 'verbosity': 0}
+2025-12-10 19:17:06,749 - src.model_trainer - INFO - 
+XGBOOST - Test Set Results:
+2025-12-10 19:17:06,749 - src.model_trainer - INFO -   RMSE: $110,568,292.17
+2025-12-10 19:17:06,751 - src.model_trainer - INFO -   MAE:  $50,326,217.54
+2025-12-10 19:17:06,751 - src.model_trainer - INFO -   R2:   0.7229
+2025-12-10 19:17:06,752 - src.model_trainer - INFO -   MAPE: 192.15%
+2025-12-10 19:17:06,752 - src.model_trainer - INFO - Training time: 66.47 seconds
+2025-12-10 19:17:06,753 - src.model_trainer - INFO - 
+============================================================
+2025-12-10 19:17:06,753 - src.model_trainer - INFO - Training LIGHTGBM
+2025-12-10 19:17:06,754 - src.model_trainer - INFO - ============================================================
+2025-12-10 19:17:06,754 - src.model_trainer - INFO - Bắt đầu optimize LIGHTGBM với Optuna...
+2025-12-10 19:19:53,250 - src.model_trainer - INFO - LIGHTGBM - Best RMSE: 1.18
+2025-12-10 19:19:53,252 - src.model_trainer - INFO - LIGHTGBM - Best params: {'n_estimators': 271, 'max_depth': 6, 'learning_rate': 0.02752325861969363, 'num_leaves': 95, 'min_child_samples': 47, 'subsample': 0.6952905937800571, 'colsample_bytree': 0.6015055358759064, 'random_state': 42, 'n_jobs': -1, 'verbosity': -1}
+2025-12-10 19:19:53,266 - src.model_trainer - INFO - 
+LIGHTGBM - Test Set Results:
+2025-12-10 19:19:53,267 - src.model_trainer - INFO -   RMSE: $103,703,642.19
+2025-12-10 19:19:53,269 - src.model_trainer - INFO -   MAE:  $48,342,738.21
+2025-12-10 19:19:53,269 - src.model_trainer - INFO -   R2:   0.7562
+2025-12-10 19:19:53,270 - src.model_trainer - INFO -   MAPE: 210.62%
+2025-12-10 19:19:53,271 - src.model_trainer - INFO - Training time: 166.51 seconds
+2025-12-10 19:19:53,271 - src.model_trainer - INFO - 
+BEST MODEL: LIGHTGBM
+2025-12-10 19:19:53,272 - src.model_trainer - INFO -   RMSE: $103,703,642.19
+2025-12-10 19:19:53,272 - src.model_trainer - INFO -   R2:   0.7562
+2025-12-10 19:19:53,272 - src.model_trainer - INFO - 
+============================================================
+2025-12-10 19:19:53,272 - src.model_trainer - INFO - ĐÃ HOÀN THÀNH TRAINING TẤT CẢ MODELS
+2025-12-10 19:19:53,274 - src.model_trainer - INFO - ============================================================
+
+2025-12-10 19:19:53,278 - src.model_trainer - INFO - 
+============================================================
+2025-12-10 19:19:53,279 - src.model_trainer - INFO - SO SÁNH MODELS
+2025-12-10 19:19:53,279 - src.model_trainer - INFO - ============================================================
+2025-12-10 19:19:53,549 - src.model_trainer - INFO - Đã lưu random_forest vào: models/random_forest.pkl
+2025-12-10 19:19:53,559 - src.model_trainer - INFO - Đã lưu xgboost vào: models/xgboost.pkl
+2025-12-10 19:19:53,576 - src.model_trainer - INFO - Đã lưu lightgbm vào: models/lightgbm.pkl
+2025-12-10 19:19:53,591 - src.model_trainer - INFO - Đã lưu kết quả vào: results/experiments.csv
+2025-12-10 19:19:53,594 - src.model_trainer - INFO - Đã lưu best params vào: results/best_params.json
+2025-12-10 19:19:55,936 - src.model_trainer - INFO - Đã load model từ: models/random_forest.pkl
+2025-12-10 19:19:57,296 - src.model_trainer - INFO - ModelTrainer đã được khởi tạo thành công
+2025-12-10 19:19:57,920 - src.model_trainer - INFO - Đã load model từ: models/xgboost.pkl
+2025-12-10 19:19:59,082 - src.model_trainer - INFO - ModelTrainer đã được khởi tạo thành công
+2025-12-10 19:19:59,495 - src.model_trainer - INFO - Đã load model từ: models/lightgbm.pkl
+2025-12-10 19:20:00,760 - src.model_trainer - INFO - ModelTrainer đã được khởi tạo thành công

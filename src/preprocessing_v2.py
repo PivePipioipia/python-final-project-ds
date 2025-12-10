@@ -29,11 +29,7 @@ except ImportError:
 
 from src.base_preprocessing import BasePreprocessor
 
-# Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+# Setup logging - use parent logger configuration
 logger = logging.getLogger(__name__)
 
 class DataPreprocessorV2(BasePreprocessor):
@@ -236,6 +232,12 @@ class DataPreprocessorV2(BasePreprocessor):
         logger.info(f"Đã fit V2 với {len(self.feature_names)} features.")
         return self
 
+    def inverse_transform_target(self, y_log: np.ndarray) -> np.ndarray:
+        """
+        Inverse transform target từ log scale về original scale.
+        """
+        return np.expm1(y_log)
+
     def transform(self, df: pd.DataFrame) -> Tuple[np.ndarray, Optional[np.ndarray]]:
         if not self.is_fitted:
             raise RuntimeError("Chưa fit preprocessor!")
@@ -243,7 +245,8 @@ class DataPreprocessorV2(BasePreprocessor):
         df = df.copy()
         y = None
         if self.target_col in df.columns:
-            y = df[self.target_col].values
+            y_series = df[self.target_col]
+            y = np.log1p(y_series.values)
 
         df = self._handle_missing_values(df, fit=False)
         # Outliers: Skiped
@@ -261,6 +264,19 @@ class DataPreprocessorV2(BasePreprocessor):
         df = df[self.feature_names] 
         
         X = self.scaler.transform(df)
+        return X, y
+
+    def fit_transform(self, df: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Fit và transform trong một bước (cho training data).
+        """
+        self.fit(df)
+        X, y = self.transform(df)
+        if y is None:
+            raise RuntimeError(
+                f"fit_transform() expects data with target column '{self.target_col}', "
+                "but it was not found."
+            )
         return X, y
 
     def save_processed_data(self, X: np.ndarray, filepath: str, y: Optional[np.ndarray] = None) -> None:

@@ -19,11 +19,7 @@ import os
 plt.style.use('seaborn-v0_8-darkgrid')
 sns.set_palette("husl")
 
-# Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+# Setup logging - use parent logger configuration
 logger = logging.getLogger(__name__)
 
 

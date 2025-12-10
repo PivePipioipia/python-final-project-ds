@@ -32,15 +32,28 @@ from optuna.samplers import TPESampler
 
 # Setup logging
 Path("results/logs").mkdir(parents=True, exist_ok=True)
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('results/logs/training.log'),
-        logging.StreamHandler()
-    ]
-)
+
+# Tạo logger riêng cho module này
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+# Tạo formatter
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+# File handler cho training.log
+training_file_handler = logging.FileHandler('results/logs/training.log', encoding='utf-8')
+training_file_handler.setLevel(logging.INFO)
+training_file_handler.setFormatter(formatter)
+
+# Console handler
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+console_handler.setFormatter(formatter)
+
+# Thêm handlers vào logger (chỉ nếu chưa có)
+if not logger.handlers:
+    logger.addHandler(training_file_handler)
+    logger.addHandler(console_handler)
 
 # Tắt logging của Optuna để giảm noise
 optuna.logging.set_verbosity(optuna.logging.WARNING)

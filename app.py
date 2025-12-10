@@ -11,7 +11,7 @@ import plotly.graph_objects as go
 current_dir = Path(__file__).resolve().parent
 sys.path.append(str(current_dir))
 
-from src.preprocessing_v2 import DataPreprocessorV2
+from src.preprocessing import DataPreprocessor
 
 st.set_page_config(
     page_title="🎬 Movie Revenue Prediction",
@@ -46,11 +46,28 @@ def load_resources():
     """Load model and preprocessor with caching"""
     try:
         model = joblib.load(MODEL_PATH)
-        preprocessor = DataPreprocessorV2.load_preprocessor(PREPROCESSOR_PATH)
+        preprocessor = DataPreprocessor.load_preprocessor(PREPROCESSOR_PATH)
         return model, preprocessor
     except Exception as e:
         st.error(f"Error loading resources: {e}")
         return None, None
+
+def safe_predict(model, X):
+    """
+    Safe prediction that bypasses feature name validation
+    Works with both XGBoost and sklearn models
+    """
+    # Ensure X is pure numpy array
+    X = np.asarray(X, dtype=np.float64)
+    
+    # For XGBoost models, use the internal booster directly
+    if hasattr(model, 'get_booster'):
+        import xgboost as xgb
+        dmatrix = xgb.DMatrix(X)
+        return model.get_booster().predict(dmatrix)
+    else:
+        # For sklearn models
+        return model.predict(X)
 
 def main():
     st.title("🎬 Movie Revenue Prediction AI")
@@ -136,23 +153,21 @@ def main():
                 'release_date': [release_date.strftime('%Y-%m-%d')],
                 'vote_average': [vote_average],
                 'vote_count': [vote_count],
-                'genres': [str([{'name': g} for g in selected_genres]).replace("'", '"')], # Mocking JSON string format
+                'genres': ['|'.join(selected_genres)],  # Pipe-separated format
                 'overview': [overview],
+                'production_companies': [''],  # Add empty production companies
+                'original_language': ['en'],  # Add default language
+                'status': ['Released'],  # Add default status
                 'revenue': [0] 
             }
             
             df_input = pd.DataFrame(input_data)
             
             try:
-                X_processed, _ = preprocessor.transform(df_input) # transform expects (X, y=None) or handles it
+                X_processed, _ = preprocessor.transform(df_input)
                 
-                
-                # Convert to numpy array to avoid feature name mismatch errors from XGBoost
-                # (We trust the preprocessor to have ordered columns correctly)
-                if hasattr(X_processed, 'values'):
-                    X_processed = X_processed.values
-                
-                log_pred = model.predict(X_processed)
+                # Use safe_predict to bypass feature name validation
+                log_pred = safe_predict(model, X_processed)
                 revenue_pred = np.expm1(log_pred)[0]
                 
                 st.success("Analysis Complete!")

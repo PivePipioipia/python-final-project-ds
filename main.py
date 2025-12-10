@@ -30,13 +30,15 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
 # Setup logging
+Path("results/logs").mkdir(parents=True, exist_ok=True)
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('results/logs/main.log'),
+        logging.FileHandler('results/logs/main.log', encoding='utf-8'),
         logging.StreamHandler()
-    ]
+    ],
+    force=True
 )
 logger = logging.getLogger(__name__)
 

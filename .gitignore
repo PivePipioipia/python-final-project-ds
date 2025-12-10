@@ -24,9 +24,6 @@ movie_env2/
 *.sqlite3
 *.db
 
-# Logs
-*.log
-
 # Archives
 *.zip
 *.rar

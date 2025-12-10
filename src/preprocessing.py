@@ -18,11 +18,7 @@ import joblib
 import os
 
 from src.base_preprocessing import BasePreprocessor  
-# Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+# Setup logging - use parent logger configuration
 logger = logging.getLogger(__name__)
 
 

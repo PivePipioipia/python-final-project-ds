@@ -1,0 +1,221 @@
+2025-12-10 19:14:01,741 - __main__ - INFO - ============================================================
+2025-12-10 19:14:01,741 - __main__ - INFO - BẮT ĐẦU FULL PIPELINE
+2025-12-10 19:14:01,741 - __main__ - INFO - ============================================================
+2025-12-10 19:14:01,743 - __main__ - INFO - 
+Step 1: Skipping fetch (data exists at data/raw/movies_2010_2024.csv)
+2025-12-10 19:14:01,743 - __main__ - INFO - 
+Step 2: Preprocessing data...
+2025-12-10 19:14:01,743 - __main__ - INFO - ============================================================
+2025-12-10 19:14:01,743 - __main__ - INFO - BẮT ĐẦU PREPROCESSING DATA
+2025-12-10 19:14:01,743 - __main__ - INFO - ============================================================
+2025-12-10 19:14:01,743 - __main__ - INFO - Loading data từ: data/raw/movies_2010_2024.csv
+2025-12-10 19:14:01,768 - src.preprocessing - INFO - DataPreprocessor đã được khởi tạo thành công (target_col=revenue, scaler=StandardScaler)
+2025-12-10 19:14:01,777 - __main__ - INFO - Train size: 2064, Test size: 517
+2025-12-10 19:14:01,777 - src.preprocessing - INFO - Bắt đầu fit preprocessing pipeline...
+2025-12-10 19:14:01,782 - src.preprocessing - INFO - Đã xử lý missing values
+2025-12-10 19:14:01,790 - src.preprocessing - INFO - Đã loại bỏ 113 outliers (5.47%)
+2025-12-10 19:14:01,797 - src.preprocessing - INFO - Đã tạo 5 date features
+2025-12-10 19:14:01,803 - src.preprocessing - INFO - Đã encode 19 genres
+2025-12-10 19:14:01,943 - src.preprocessing - INFO - Đã tạo 30 TF-IDF features từ overview
+2025-12-10 19:14:01,946 - src.preprocessing - INFO - Đã tạo derived features
+2025-12-10 19:14:01,949 - src.preprocessing - INFO - Đã fit preprocessor với 65 features
+2025-12-10 19:14:01,951 - src.preprocessing - INFO - Bắt đầu transform data...
+2025-12-10 19:14:01,954 - src.preprocessing - INFO - Đã xử lý missing values
+2025-12-10 19:14:01,960 - src.preprocessing - INFO - Đã loại bỏ 51 outliers (2.47%)
+2025-12-10 19:14:01,965 - src.preprocessing - INFO - Đã tạo 5 date features
+2025-12-10 19:14:01,969 - src.preprocessing - INFO - Đã encode 19 genres
+2025-12-10 19:14:02,040 - src.preprocessing - INFO - Đã tạo 30 TF-IDF features từ overview
+2025-12-10 19:14:02,043 - src.preprocessing - INFO - Đã tạo derived features
+2025-12-10 19:14:02,046 - src.preprocessing - INFO - Đã transform data với shape: (2013, 65)
+2025-12-10 19:14:02,047 - src.preprocessing - INFO - Bắt đầu transform data...
+2025-12-10 19:14:02,050 - src.preprocessing - INFO - Đã xử lý missing values
+2025-12-10 19:14:02,054 - src.preprocessing - INFO - Đã tạo 5 date features
+2025-12-10 19:14:02,056 - src.preprocessing - INFO - Đã encode 19 genres
+2025-12-10 19:14:02,077 - src.preprocessing - INFO - Đã tạo 30 TF-IDF features từ overview
+2025-12-10 19:14:02,080 - src.preprocessing - INFO - Đã tạo derived features
+2025-12-10 19:14:02,083 - src.preprocessing - INFO - Đã transform data với shape: (517, 65)
+2025-12-10 19:14:02,195 - src.preprocessing - INFO - Đã lưu processed data vào: data/processed/X_train.csv
+2025-12-10 19:14:02,225 - src.preprocessing - INFO - Đã lưu processed data vào: data/processed/X_test.csv
+2025-12-10 19:14:02,228 - src.preprocessing - INFO - Đã lưu preprocessor vào: models/preprocessor.pkl
+2025-12-10 19:14:02,228 - __main__ - INFO - Đã hoàn thành preprocessing thành công
+2025-12-10 19:14:02,228 - __main__ - INFO -   X_train shape: (2013, 65)
+2025-12-10 19:14:02,229 - __main__ - INFO -   X_test shape: (517, 65)
+2025-12-10 19:14:02,229 - __main__ - INFO -   Number of features: 65
+2025-12-10 19:14:02,231 - __main__ - INFO - 
+Step 3: Training all models...
+2025-12-10 19:14:02,232 - __main__ - INFO - ============================================================
+2025-12-10 19:14:02,232 - __main__ - INFO - BẮT ĐẦU TRAINING MODELS
+2025-12-10 19:14:02,232 - __main__ - INFO - ============================================================
+2025-12-10 19:14:02,233 - __main__ - INFO - Loading processed data từ: data/processed
+2025-12-10 19:14:02,324 - src.model_trainer - INFO - ModelTrainer đã được khởi tạo thành công
+2025-12-10 19:14:02,325 - src.model_trainer - INFO - Đã load data - Train: (2013, 65), Test: (517, 65)
+2025-12-10 19:14:02,325 - src.model_trainer - INFO - Target range (original): [$100,000, $2,068,223,624]
+2025-12-10 19:14:02,326 - src.model_trainer - INFO - Target range (log): [11.51, 21.45]
+2025-12-10 19:14:02,327 - src.model_trainer - INFO - 
+============================================================
+2025-12-10 19:14:02,327 - src.model_trainer - INFO - BẮT ĐẦU TRAINING TẤT CẢ MODELS
+2025-12-10 19:14:02,327 - src.model_trainer - INFO - ============================================================
+
+2025-12-10 19:14:02,327 - src.model_trainer - INFO - 
+============================================================
+2025-12-10 19:14:02,327 - src.model_trainer - INFO - Training RANDOM_FOREST
+2025-12-10 19:14:02,328 - src.model_trainer - INFO - ============================================================
+2025-12-10 19:14:02,328 - src.model_trainer - INFO - Bắt đầu optimize RANDOM_FOREST với Optuna...
+2025-12-10 19:16:00,134 - src.model_trainer - INFO - RANDOM_FOREST - Best RMSE: 1.19
+2025-12-10 19:16:00,136 - src.model_trainer - INFO - RANDOM_FOREST - Best params: {'n_estimators': 409, 'max_depth': 19, 'min_samples_split': 4, 'min_samples_leaf': 1, 'max_features': 'log2', 'random_state': 42, 'n_jobs': -1}
+2025-12-10 19:16:00,276 - src.model_trainer - INFO - 
+RANDOM_FOREST - Test Set Results:
+2025-12-10 19:16:00,278 - src.model_trainer - INFO -   RMSE: $113,143,001.07
+2025-12-10 19:16:00,279 - src.model_trainer - INFO -   MAE:  $52,632,040.23
+2025-12-10 19:16:00,279 - src.model_trainer - INFO -   R2:   0.7099
+2025-12-10 19:16:00,279 - src.model_trainer - INFO -   MAPE: 233.70%
+2025-12-10 19:16:00,279 - src.model_trainer - INFO - Training time: 117.95 seconds
+2025-12-10 19:16:00,279 - src.model_trainer - INFO - 
+============================================================
+2025-12-10 19:16:00,280 - src.model_trainer - INFO - Training XGBOOST
+2025-12-10 19:16:00,281 - src.model_trainer - INFO - ============================================================
+2025-12-10 19:16:00,281 - src.model_trainer - INFO - Bắt đầu optimize XGBOOST với Optuna...
+2025-12-10 19:17:06,738 - src.model_trainer - INFO - XGBOOST - Best RMSE: 1.17
+2025-12-10 19:17:06,739 - src.model_trainer - INFO - XGBOOST - Best params: {'n_estimators': 365, 'max_depth': 3, 'learning_rate': 0.03191570400415464, 'subsample': 0.8150793703873596, 'colsample_bytree': 0.822795405848997, 'min_child_weight': 1, 'random_state': 42, 'n_jobs': -1, 'verbosity': 0}
+2025-12-10 19:17:06,749 - src.model_trainer - INFO - 
+XGBOOST - Test Set Results:
+2025-12-10 19:17:06,749 - src.model_trainer - INFO -   RMSE: $110,568,292.17
+2025-12-10 19:17:06,751 - src.model_trainer - INFO -   MAE:  $50,326,217.54
+2025-12-10 19:17:06,751 - src.model_trainer - INFO -   R2:   0.7229
+2025-12-10 19:17:06,752 - src.model_trainer - INFO -   MAPE: 192.15%
+2025-12-10 19:17:06,752 - src.model_trainer - INFO - Training time: 66.47 seconds
+2025-12-10 19:17:06,753 - src.model_trainer - INFO - 
+============================================================
+2025-12-10 19:17:06,753 - src.model_trainer - INFO - Training LIGHTGBM
+2025-12-10 19:17:06,754 - src.model_trainer - INFO - ============================================================
+2025-12-10 19:17:06,754 - src.model_trainer - INFO - Bắt đầu optimize LIGHTGBM với Optuna...
+2025-12-10 19:19:53,250 - src.model_trainer - INFO - LIGHTGBM - Best RMSE: 1.18
+2025-12-10 19:19:53,252 - src.model_trainer - INFO - LIGHTGBM - Best params: {'n_estimators': 271, 'max_depth': 6, 'learning_rate': 0.02752325861969363, 'num_leaves': 95, 'min_child_samples': 47, 'subsample': 0.6952905937800571, 'colsample_bytree': 0.6015055358759064, 'random_state': 42, 'n_jobs': -1, 'verbosity': -1}
+2025-12-10 19:19:53,266 - src.model_trainer - INFO - 
+LIGHTGBM - Test Set Results:
+2025-12-10 19:19:53,267 - src.model_trainer - INFO -   RMSE: $103,703,642.19
+2025-12-10 19:19:53,269 - src.model_trainer - INFO -   MAE:  $48,342,738.21
+2025-12-10 19:19:53,269 - src.model_trainer - INFO -   R2:   0.7562
+2025-12-10 19:19:53,270 - src.model_trainer - INFO -   MAPE: 210.62%
+2025-12-10 19:19:53,271 - src.model_trainer - INFO - Training time: 166.51 seconds
+2025-12-10 19:19:53,271 - src.model_trainer - INFO - 
+BEST MODEL: LIGHTGBM
+2025-12-10 19:19:53,272 - src.model_trainer - INFO -   RMSE: $103,703,642.19
+2025-12-10 19:19:53,272 - src.model_trainer - INFO -   R2:   0.7562
+2025-12-10 19:19:53,272 - src.model_trainer - INFO - 
+============================================================
+2025-12-10 19:19:53,272 - src.model_trainer - INFO - ĐÃ HOÀN THÀNH TRAINING TẤT CẢ MODELS
+2025-12-10 19:19:53,274 - src.model_trainer - INFO - ============================================================
+
+2025-12-10 19:19:53,278 - src.model_trainer - INFO - 
+============================================================
+2025-12-10 19:19:53,279 - src.model_trainer - INFO - SO SÁNH MODELS
+2025-12-10 19:19:53,279 - src.model_trainer - INFO - ============================================================
+2025-12-10 19:19:53,549 - src.model_trainer - INFO - Đã lưu random_forest vào: models/random_forest.pkl
+2025-12-10 19:19:53,559 - src.model_trainer - INFO - Đã lưu xgboost vào: models/xgboost.pkl
+2025-12-10 19:19:53,576 - src.model_trainer - INFO - Đã lưu lightgbm vào: models/lightgbm.pkl
+2025-12-10 19:19:53,591 - src.model_trainer - INFO - Đã lưu kết quả vào: results/experiments.csv
+2025-12-10 19:19:53,594 - src.model_trainer - INFO - Đã lưu best params vào: results/best_params.json
+2025-12-10 19:19:53,595 - __main__ - INFO - Đã hoàn thành training thành công
+2025-12-10 19:19:53,607 - __main__ - INFO - 
+Step 4: Creating visualizations...
+2025-12-10 19:19:53,608 - __main__ - INFO - ============================================================
+2025-12-10 19:19:53,609 - __main__ - INFO - BẮT ĐẦU VISUALIZATION
+2025-12-10 19:19:53,609 - __main__ - INFO - ============================================================
+2025-12-10 19:19:53,635 - src.visualizer - INFO - Visualizer đã được khởi tạo thành công
+2025-12-10 19:19:53,666 - src.preprocessing - INFO - Đã load preprocessor từ: models/preprocessor.pkl
+2025-12-10 19:19:53,667 - __main__ - INFO - Tạo EDA plots...
+2025-12-10 19:19:54,503 - src.visualizer - INFO - Đã vẽ biểu đồ phân phối target: Revenue Distribution (USD)
+2025-12-10 19:19:54,986 - src.visualizer - INFO - Đã lưu plot vào: visualizations/eda_plots/revenue_distribution.png
+2025-12-10 19:19:55,002 - src.visualizer - INFO - Đã đóng tất cả figures
+2025-12-10 19:19:55,402 - src.visualizer - INFO - Đã vẽ correlation matrix: Feature Correlations
+2025-12-10 19:19:55,769 - src.visualizer - INFO - Đã lưu plot vào: visualizations/eda_plots/correlation_matrix.png
+2025-12-10 19:19:55,783 - src.visualizer - INFO - Đã đóng tất cả figures
+2025-12-10 19:19:55,783 - __main__ - INFO - Đã tạo EDA plots
+2025-12-10 19:19:55,783 - __main__ - INFO - Tạo model result plots...
+2025-12-10 19:19:55,795 - __main__ - INFO - Generating plots cho random_forest...
+2025-12-10 19:19:55,936 - src.model_trainer - INFO - Đã load model từ: models/random_forest.pkl
+2025-12-10 19:19:56,218 - src.visualizer - INFO - Đã vẽ actual vs predicted cho random_forest
+2025-12-10 19:19:56,550 - src.visualizer - INFO - Đã lưu plot vào: visualizations/model_results/actual_vs_pred_random_forest.png
+2025-12-10 19:19:56,564 - src.visualizer - INFO - Đã đóng tất cả figures
+2025-12-10 19:19:56,816 - src.visualizer - INFO - Đã vẽ residual analysis cho random_forest
+2025-12-10 19:19:57,191 - src.visualizer - INFO - Đã lưu plot vào: visualizations/model_results/residuals_random_forest.png
+2025-12-10 19:19:57,205 - src.visualizer - INFO - Đã đóng tất cả figures
+2025-12-10 19:19:57,296 - src.model_trainer - INFO - ModelTrainer đã được khởi tạo thành công
+2025-12-10 19:19:57,641 - src.visualizer - INFO - Đã vẽ feature importance cho random_forest
+2025-12-10 19:19:57,898 - src.visualizer - INFO - Đã lưu plot vào: visualizations/model_results/feature_importance_random_forest.png
+2025-12-10 19:19:57,913 - src.visualizer - INFO - Đã đóng tất cả figures
+2025-12-10 19:19:57,914 - __main__ - INFO - Generating plots cho xgboost...
+2025-12-10 19:19:57,920 - src.model_trainer - INFO - Đã load model từ: models/xgboost.pkl
+2025-12-10 19:19:58,148 - src.visualizer - INFO - Đã vẽ actual vs predicted cho xgboost
+2025-12-10 19:19:58,500 - src.visualizer - INFO - Đã lưu plot vào: visualizations/model_results/actual_vs_pred_xgboost.png
+2025-12-10 19:19:58,513 - src.visualizer - INFO - Đã đóng tất cả figures
+2025-12-10 19:19:58,721 - src.visualizer - INFO - Đã vẽ residual analysis cho xgboost
+2025-12-10 19:19:59,057 - src.visualizer - INFO - Đã lưu plot vào: visualizations/model_results/residuals_xgboost.png
+2025-12-10 19:19:59,069 - src.visualizer - INFO - Đã đóng tất cả figures
+2025-12-10 19:19:59,082 - src.model_trainer - INFO - ModelTrainer đã được khởi tạo thành công
+2025-12-10 19:19:59,247 - src.visualizer - INFO - Đã vẽ feature importance cho xgboost
+2025-12-10 19:19:59,477 - src.visualizer - INFO - Đã lưu plot vào: visualizations/model_results/feature_importance_xgboost.png
+2025-12-10 19:19:59,491 - src.visualizer - INFO - Đã đóng tất cả figures
+2025-12-10 19:19:59,491 - __main__ - INFO - Generating plots cho lightgbm...
+2025-12-10 19:19:59,495 - src.model_trainer - INFO - Đã load model từ: models/lightgbm.pkl
+2025-12-10 19:19:59,703 - src.visualizer - INFO - Đã vẽ actual vs predicted cho lightgbm
+2025-12-10 19:20:00,042 - src.visualizer - INFO - Đã lưu plot vào: visualizations/model_results/actual_vs_pred_lightgbm.png
+2025-12-10 19:20:00,057 - src.visualizer - INFO - Đã đóng tất cả figures
+2025-12-10 19:20:00,389 - src.visualizer - INFO - Đã vẽ residual analysis cho lightgbm
+2025-12-10 19:20:00,729 - src.visualizer - INFO - Đã lưu plot vào: visualizations/model_results/residuals_lightgbm.png
+2025-12-10 19:20:00,749 - src.visualizer - INFO - Đã đóng tất cả figures
+2025-12-10 19:20:00,760 - src.model_trainer - INFO - ModelTrainer đã được khởi tạo thành công
+2025-12-10 19:20:00,941 - src.visualizer - INFO - Đã vẽ feature importance cho lightgbm
+2025-12-10 19:20:01,201 - src.visualizer - INFO - Đã lưu plot vào: visualizations/model_results/feature_importance_lightgbm.png
+2025-12-10 19:20:01,218 - src.visualizer - INFO - Đã đóng tất cả figures
+2025-12-10 19:20:01,530 - src.visualizer - INFO - Đã vẽ comprehensive model comparison
+2025-12-10 19:20:01,948 - src.visualizer - INFO - Đã lưu plot vào: visualizations/model_results/model_comparison_all_metrics.png
+2025-12-10 19:20:01,967 - src.visualizer - INFO - Đã đóng tất cả figures
+2025-12-10 19:20:01,967 - __main__ - INFO - Đã tạo model comparison plots
+2025-12-10 19:20:01,968 - __main__ - INFO - Đã hoàn thành tất cả visualizations
+2025-12-10 19:20:01,968 - __main__ - INFO - 
+============================================================
+2025-12-10 19:20:01,969 - __main__ - INFO - ĐÃ HOÀN THÀNH FULL PIPELINE THÀNH CÔNG
+2025-12-10 19:20:01,969 - __main__ - INFO - ============================================================
+2025-12-10 19:20:01,969 - __main__ - INFO - 
+Kết quả được lưu tại:
+2025-12-10 19:20:01,969 - __main__ - INFO -   - Models: models/
+2025-12-10 19:20:01,969 - __main__ - INFO -   - Results: results/
+2025-12-10 19:20:01,969 - __main__ - INFO -   - Visualizations: visualizations/
+2025-12-10 19:43:12,070 - __main__ - INFO - ============================================================
+2025-12-10 19:43:12,072 - __main__ - INFO - BẮT ĐẦU PREPROCESSING DATA
+2025-12-10 19:43:12,072 - __main__ - INFO - ============================================================
+2025-12-10 19:43:12,072 - __main__ - INFO - Loading data từ: data/raw/movies_2010_2024.csv
+2025-12-10 19:43:12,097 - src.preprocessing - INFO - DataPreprocessor đã được khởi tạo thành công (target_col=revenue, scaler=StandardScaler)
+2025-12-10 19:43:12,107 - __main__ - INFO - Train size: 2064, Test size: 517
+2025-12-10 19:43:12,107 - src.preprocessing - INFO - Bắt đầu fit preprocessing pipeline...
+2025-12-10 19:43:12,110 - src.preprocessing - INFO - Đã xử lý missing values
+2025-12-10 19:43:12,118 - src.preprocessing - INFO - Đã loại bỏ 113 outliers (5.47%)
+2025-12-10 19:43:12,125 - src.preprocessing - INFO - Đã tạo 5 date features
+2025-12-10 19:43:12,132 - src.preprocessing - INFO - Đã encode 19 genres
+2025-12-10 19:43:12,304 - src.preprocessing - INFO - Đã tạo 30 TF-IDF features từ overview
+2025-12-10 19:43:12,307 - src.preprocessing - INFO - Đã tạo derived features
+2025-12-10 19:43:12,311 - src.preprocessing - INFO - Đã fit preprocessor với 65 features
+2025-12-10 19:43:12,312 - src.preprocessing - INFO - Bắt đầu transform data...
+2025-12-10 19:43:12,315 - src.preprocessing - INFO - Đã xử lý missing values
+2025-12-10 19:43:12,320 - src.preprocessing - INFO - Đã loại bỏ 51 outliers (2.47%)
+2025-12-10 19:43:12,326 - src.preprocessing - INFO - Đã tạo 5 date features
+2025-12-10 19:43:12,331 - src.preprocessing - INFO - Đã encode 19 genres
+2025-12-10 19:43:12,399 - src.preprocessing - INFO - Đã tạo 30 TF-IDF features từ overview
+2025-12-10 19:43:12,402 - src.preprocessing - INFO - Đã tạo derived features
+2025-12-10 19:43:12,406 - src.preprocessing - INFO - Đã transform data với shape: (2013, 65)
+2025-12-10 19:43:12,407 - src.preprocessing - INFO - Bắt đầu transform data...
+2025-12-10 19:43:12,409 - src.preprocessing - INFO - Đã xử lý missing values
+2025-12-10 19:43:12,413 - src.preprocessing - INFO - Đã tạo 5 date features
+2025-12-10 19:43:12,416 - src.preprocessing - INFO - Đã encode 19 genres
+2025-12-10 19:43:12,436 - src.preprocessing - INFO - Đã tạo 30 TF-IDF features từ overview
+2025-12-10 19:43:12,438 - src.preprocessing - INFO - Đã tạo derived features
+2025-12-10 19:43:12,440 - src.preprocessing - INFO - Đã transform data với shape: (517, 65)
+2025-12-10 19:43:12,553 - src.preprocessing - INFO - Đã lưu processed data vào: data/processed/X_train.csv
+2025-12-10 19:43:12,582 - src.preprocessing - INFO - Đã lưu processed data vào: data/processed/X_test.csv
+2025-12-10 19:43:12,699 - src.preprocessing - INFO - Đã lưu preprocessor vào: models/preprocessor.pkl
+2025-12-10 19:43:12,700 - __main__ - INFO - Đã hoàn thành preprocessing thành công
+2025-12-10 19:43:12,700 - __main__ - INFO -   X_train shape: (2013, 65)
+2025-12-10 19:43:12,700 - __main__ - INFO -   X_test shape: (517, 65)
+2025-12-10 19:43:12,700 - __main__ - INFO -   Number of features: 65

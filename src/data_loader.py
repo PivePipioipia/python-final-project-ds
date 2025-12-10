@@ -13,10 +13,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 load_dotenv()
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+# Setup logging - use parent logger configuration
 logger = logging.getLogger(__name__)
 
 

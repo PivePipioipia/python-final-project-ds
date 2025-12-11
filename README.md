@@ -70,6 +70,69 @@ Cách nhanh nhất để trải nghiệm dự án là chạy Notebook Pipeline.
 
 ---
 
+## Chạy Pipeline với Main Script
+
+Ngoài Jupyter Notebook, bạn có thể chạy toàn bộ pipeline hoặc từng bước riêng lẻ bằng script `main.py`:
+
+### 1. Chạy Toàn Bộ Pipeline (Khuyến Nghị)
+```bash
+python main.py full-pipeline
+```
+Lệnh này sẽ tự động:
+- Tải dữ liệu từ TMDb API (nếu chưa có)
+- Tiền xử lý dữ liệu
+- Huấn luyện tất cả các models (Random Forest, XGBoost, LightGBM)
+- Tạo visualizations
+
+### 2. Chạy Từng Bước Riêng Lẻ
+
+#### Bước 1: Tải Dữ Liệu
+```bash
+python main.py fetch-data --start-year 2010 --end-year 2024
+```
+
+#### Bước 2: Tiền Xử Lý Dữ Liệu
+```bash
+python main.py preprocess --input data/raw/movies_2010_2024.csv
+```
+
+#### Bước 3: Huấn Luyện Model
+```bash
+# Train tất cả models
+python main.py train --model all
+
+# Hoặc train một model cụ thể
+python main.py train --model xgboost
+python main.py train --model random_forest
+python main.py train --model lightgbm
+```
+
+#### Bước 4: Đánh Giá Model
+```bash
+python main.py evaluate --model-path models/xgboost.pkl
+```
+
+#### Bước 5: Tạo Visualizations
+```bash
+# Tạo tất cả các biểu đồ
+python main.py visualize --plot-type all
+
+# Hoặc chỉ tạo EDA plots
+python main.py visualize --plot-type eda
+
+# Hoặc chỉ tạo model result plots
+python main.py visualize --plot-type model
+```
+
+### 3. Kết Quả
+Sau khi chạy, kết quả sẽ được lưu tại:
+- **Models**: `models/` - Các model đã train (.pkl files)
+- **Results**: `results/` - Metrics, predictions, model comparison
+- **Logs**: `results/logs/` - Training logs và main logs
+- **Visualizations**: `visualizations/` - Các biểu đồ phân tích
+
+---
+
 ## Kết Quả So Sánh (Benchmark)
 
 Tại sao lại cần phiên bản V2? Dưới đây là kết quả thực nghiệm trên tập dữ liệu phim 2010-2024:

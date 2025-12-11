@@ -20,6 +20,12 @@ Dự án Machine Learning dự đoán doanh thu phim điện ảnh (Box Office R
 *   **End-to-End Pipeline**: Từ `Raw Data` -> `Feature Engineering` -> `Training` -> `Evaluation`
 
 ---
+## Yêu cầu hệ thống
+
+- **Python**: 3.11  
+- **Anaconda / Miniconda** (khuyến nghị)  
+- **Git**  
+- Windows 10/11 (đã test)
 
 ## Cài Đặt
 
@@ -30,24 +36,27 @@ cd python-final-project-ds
 ```
 
 ### 2. Thiết Lập Môi Trường (Khuyên dùng Conda hoặc Venv)
+(Khuyến nghị dùng Anaconda Prompt để ổn định nhất)
+
 ```bash
-# Tạo môi trường
-python -m venv venv
-
-# Kích hoạt (Windows)
-venv\Scripts\activate
-
-# Kích hoạt (Mac/Linux)
-source venv/bin/activate
+conda create -n movie python=3.11 -y
+conda activate movie
 ```
 
 ### 3. Cài Đặt Thư Viện
-Dự án yêu cầu các thư viện ML cơ bản và `sentence-transformers` cho NLP.
+
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Cấu Hình API Key
+### 4. Nếu dùng Command Prompt thường → cần chạy activate.bat trước:
+```bash
+...anaconda3\Scripts\activate.bat
+conda activate movie
+```
+
+
+### 5. Cấu Hình API Key
 Tạo file `.env` trong thư mục gốc và điền key của bạn vào:
 ```env
 TMDB_API_KEY=your_api_key_here
@@ -137,33 +146,36 @@ Sau khi chạy, kết quả sẽ được lưu tại:
 
 Tại sao lại cần phiên bản V2? Dưới đây là kết quả thực nghiệm trên tập dữ liệu phim 2010-2024:
 
-| Metric | V1 (Basic) | V2 (Advanced) | Nhận Xét |
+| Đặc Điểm | V1 (Basic) | V2 (Advanced) | Sự Khác Biệt |
 | :--- | :--- | :--- | :--- |
-| **Chiến lược Outlier** | Xóa bỏ phim > 1.5 IQR | Giữ lại (Dùng RobustScaler) | V1 mất hết các phim bom tấn (Marvel, Avatar...), V2 giữ lại được. |
-| **Feature Text** | TF-IDF (100 features) | BGE Embeddings (384 dims) | V2 hiểu ngữ nghĩa tốt hơn nhiều. |
-| **R2 Score** | ~0.59 | **~0.76** | **V2 giải thích được 76% sự biến thiên dữ liệu.** |
-| **MAE (Sai số)** | Thấp ($28M) | Cao ($53M) | V1 sai số thấp do chỉ đoán phim nhỏ. V2 sai số cao hơn do phải đoán cả phim tỷ đô (sai số tuyệt đối lớn là bình thường). |
+| **Xử lý Outlier** | Loại bỏ (IQR Method) | Giữ lại (RobustScaler) | V1 loại bỏ các giá trị ngoại lai; V2 giữ lại toàn bộ dữ liệu. |
+| **Số lượng Features** | 65 | 419 | V2 có số chiều dữ liệu lớn hơn nhiều do sử dụng Embeddings. |
+| **R2 Score** | ~0.77 | ~0.73 | Kết quả R2 trên tập kiểm thử (Test set). |
+| **MAE** | ~$51.5M | ~$49.8M | Sai số tuyệt đối trung bình trên tập kiểm thử. |
 
- **Kết luận**: V2 vượt trội hoàn toàn về khả năng tổng quát hóa và độ chính xác thực tế.
+Bảng trên tóm tắt sự khác biệt về phương pháp tiếp cận và kết quả thực nghiệm giữa hai phiên bản pipeline.
 
 ---
 
 ## Cấu Trúc Dự Án
 
-*   **`configs/config.yaml`**: "Bộ não" của dự án. Chỉnh sửa năm lấy dữ liệu, tham số model, ngưỡng lọc outlier tại đây.
+*   **`configs/config.yaml`**: "Bộ não" của dự án. Chứa tham số cấu hình toàn cục, hyperparams và đường dẫn.
 *   **`src/`**: Mã nguồn chính.
-    *   `data_loader.py`: Class `TMDbDataLoader` tải và lưu trữ dữ liệu.
-    *   `preprocessing_v2.py`: **(Core)** Class `DataPreprocessorV2` chứa toàn bộ logic xử lý nâng cao.
-    *   `model_trainer.py`: Class `ModelTrainer` quản lý việc huấn luyện và Optuna.
+    *   `data_loader.py`: Thu thập dữ liệu từ API và quản lý file raw.
+    *   `preprocessing.py`: Pipeline V1 (Xử lý cơ bản, xóa outlier).
+    *   `preprocessing_v2.py`: **(Core)** Pipeline V2 (Nâng cao, giữ outlier, Embeddings).
+    *   `model_trainer.py`: Quản lý huấn luyện, Cross-Validation và AutoML (Optuna).
+    *   `visualizer.py`: Module chuyên biệt cho vẽ biểu đồ EDA và đánh giá Model.
 *   **`notebooks/`**:
-    *   `preview_pipeline.ipynb`: Demo chạy toàn bộ quy trình.
-    *   `eda_analysis.ipynb`: Phân tích khám phá dữ liệu (Biểu đồ, Insight).
-    *   `demo_inference.ipynb`: Nhập thông tin phim bất kỳ -> Dự đoán doanh thu.
+    *   `preview_pipeline.ipynb`: Demo chạy pipeline và so sánh hiệu năng V1/V2.
+    *   `eda_analysis_final.ipynb`: Phân tích khám phá dữ liệu chuyên sâu (Detailed EDA).
+    *   `demo_inference.ipynb`: Demo suy luận (Inference) cho phim mới.
+*   **Root**:
+    *   `main.py`: CLI Entrypoint - Chạy pipeline, train model, visualize từ dòng lệnh.
+    *   `app.py`: Streamlit Web App - Giao diện demo trực quan cho người dùng.
+    *   `run_app.bat`: Script tiện ích để khởi chạy nhanh Web App.
 
 ---
 
-Kích hoạt môi trường 
-C:\Users\PC\anaconda3\Scripts\activate.bat
-conda activate movie_v2
 
 © 2025 Movie Revenue Prediction Project.

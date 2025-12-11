@@ -28,5 +28,6 @@ movie_env2/
 *.zip
 *.rar
 
-# Large model file (exceeds GitHub 100MB limit)
-models/preprocessor.pkl
+# Model files (can be large and exceed GitHub 100MB limit)
+models/*.pkl
+*.pkl
